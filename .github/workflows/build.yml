@@ -1,0 +1,38 @@
+---
+name: Build
+
+on:
+  push:
+    branches: [test]
+    paths:
+      - 'profile/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'profile/**'
+      - '.github/workflows/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux/archlinux:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update keyring and install archiso
+        run: |
+          pacman -Sy --needed --noconfirm archlinux-keyring
+          pacman -Syu --needed --noconfirm archiso
+
+      - name: Build ISO
+        run: mkarchiso -v -m iso -o output/ -w tmp/ profile/
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: harbor_srv-iso
+          path: output/
+          retention-days: 30
