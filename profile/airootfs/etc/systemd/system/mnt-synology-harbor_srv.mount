@@ -4,7 +4,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Mount]
-What=192.168.1.10:/harbor_srv
+What=192.168.1.10:/volume1/harbor_srv
 Where=/mnt/synology/harbor_srv
 Type=nfs
 Options=nfsvers=4.1,rw,hard,_netdev
