@@ -57,13 +57,34 @@ mount "$LOOP_DEV" "${WORK_DIR}/mnt"
 mapfile -t PACKAGES < <(sed -e '/^#/d' -e '/^$/d' "${PROFILE_DIR}/packages.x86_64")
 echo ":: Installing ${#PACKAGES[@]} packages via pacstrap..."
 
-# --- Pacstrap ---
+# --- Pacstrap (without running mkinitcpio via pacman hooks) ---
 PACMAN_CONF="${PROFILE_DIR}/pacman.conf"
+
+# Create a hook override to skip mkinitcpio during pacstrap.
+# We run it manually after copying the overlay with our custom preset/config.
+mkdir -p "${WORK_DIR}/mnt/etc/pacman.d/hooks"
+cat > "${WORK_DIR}/mnt/etc/pacman.d/hooks/90-mkinitcpio-install.hook" << 'HOOK'
+[Trigger]
+Type = Path
+Operation = Install
+Operation = Upgrade
+Target = usr/lib/modules/*/vmlinuz
+Target = usr/lib/initcpio/*
+
+[Action]
+Description = Skipping mkinitcpio during build...
+When = PostTransaction
+Exec = /usr/bin/true
+HOOK
+
 if [ -f "$PACMAN_CONF" ]; then
     pacstrap -C "$PACMAN_CONF" -c -G -M "${WORK_DIR}/mnt" "${PACKAGES[@]}"
 else
     pacstrap -c -G -M "${WORK_DIR}/mnt" "${PACKAGES[@]}"
 fi
+
+# Remove the hook override
+rm -f "${WORK_DIR}/mnt/etc/pacman.d/hooks/90-mkinitcpio-install.hook"
 
 # --- Copy airootfs overlay ---
 if [ -d "${PROFILE_DIR}/airootfs" ]; then
@@ -75,6 +96,7 @@ fi
 echo ":: Applying file permissions..."
 (
     # Source profiledef.sh to get file_permissions array
+    declare -A file_permissions
     # shellcheck disable=SC1090,SC1091
     source "${PROFILE_DIR}/profiledef.sh"
     # shellcheck disable=SC2154
@@ -104,7 +126,7 @@ arch-chroot "${WORK_DIR}/mnt" systemctl enable \
     docker \
     mnt-synology-harbor_srv.mount
 
-# Generate initramfs
+# Generate initramfs (now with our custom preset and hooks config)
 arch-chroot "${WORK_DIR}/mnt" mkinitcpio -P
 
 # --- Finalize ---
