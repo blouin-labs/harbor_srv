@@ -63,7 +63,7 @@ jobs:
         run: ./scripts/build-image.sh profile/ output/
 
       - name: Upload root image artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: harbor_srv-root
           path: output/
