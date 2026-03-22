@@ -7,7 +7,7 @@ Wants=network-online.target
 What=192.168.1.10:/volume1/harbor_srv
 Where=/mnt/synology/harbor_srv
 Type=nfs
-Options=nfsvers=4.1,rw,hard,_netdev
+Options=nfsvers=4.1,rw,soft,timeo=100,retrans=3,_netdev
 TimeoutSec=30
 
 [Install]
