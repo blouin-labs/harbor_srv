@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+build() {
+    add_binary blkid
+    add_binary sed
+    add_runscript
+}

@@ -1,0 +1,57 @@
+# shellcheck shell=bash
+launch_interactive_shell() {
+    echo ":: Boot failure on headless server — attempting automatic slot failover..."
+
+    local conf="/new_root/etc/harbor/partitions.conf"
+    if [[ ! -f "$conf" ]]; then
+        echo ":: Partition config not found — blind reboot in 5s"
+        sleep 5
+        echo 1 > /proc/sys/kernel/sysrq
+        echo b > /proc/sysrq-trigger
+        return
+    fi
+
+    # shellcheck source=/dev/null
+    source "$conf"
+
+    # Identify the failing slot from kernel cmdline
+    local current_partuuid
+    current_partuuid=$(grep -o 'root=PARTUUID=[^ ]*' /proc/cmdline | cut -d= -f3)
+
+    local current_entry other_entry
+    if [[ "$current_partuuid" == "$ROOT_A_PARTUUID" ]]; then
+        current_entry="harbor-a"
+        other_entry="harbor-b"
+    else
+        current_entry="harbor-b"
+        other_entry="harbor-a"
+    fi
+
+    # Mount ESP
+    local esp_dev
+    esp_dev=$(blkid -t "PARTUUID=$ESP_PARTUUID" -o device)
+    if [[ -z "$esp_dev" ]]; then
+        echo ":: ESP device not found — blind reboot in 5s"
+        sleep 5
+        echo 1 > /proc/sys/kernel/sysrq
+        echo b > /proc/sysrq-trigger
+        return
+    fi
+
+    mkdir -p /run/harbor-esp
+    mount "$esp_dev" /run/harbor-esp
+
+    # Remove failing slot's entry (blessed and all counted variants)
+    rm -f /run/harbor-esp/loader/entries/${current_entry}.conf
+    rm -f /run/harbor-esp/loader/entries/${current_entry}+*.conf
+
+    # Switch default to the other slot
+    sed -i "s|^default .*|default ${other_entry}*|" /run/harbor-esp/loader/loader.conf
+
+    umount /run/harbor-esp
+
+    echo ":: Switched boot default from ${current_entry} to ${other_entry} — rebooting..."
+    sleep 2
+    echo 1 > /proc/sys/kernel/sysrq
+    echo b > /proc/sysrq-trigger
+}
