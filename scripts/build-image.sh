@@ -90,6 +90,8 @@ rm -f "${WORK_DIR}/mnt/etc/pacman.d/hooks/90-mkinitcpio-install.hook"
 if [ -d "${PROFILE_DIR}/airootfs" ]; then
     echo ":: Copying airootfs overlay..."
     cp -a "${PROFILE_DIR}/airootfs/." "${WORK_DIR}/mnt/"
+    # Strip documentation — README files are for developers, not the image
+    find "${WORK_DIR}/mnt" -name "README.md" -delete
 fi
 
 # --- Apply file permissions from profiledef.sh ---

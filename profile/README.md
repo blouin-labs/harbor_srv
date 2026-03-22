@@ -43,39 +43,9 @@ The `/root` and `/root/.ssh` entries are critical. Without them, `sshd` refuses 
 
 ## `airootfs/`
 
-Config overlay copied verbatim into the root filesystem (`cp -a airootfs/. mnt/`). Paths here map directly to their location in the installed system.
+Config overlay copied verbatim into the root filesystem (`cp -a airootfs/. mnt/`). Paths here map directly to their location in the installed system. README files inside `airootfs/` are stripped from the image at build time.
 
-### Notable files
-
-**`etc/systemd/network/20-ethernet.network`** — Static IP configuration.
-
-```ini
-[Network]
-Address=192.168.1.5/24
-Gateway=192.168.1.1
-DNS=1.1.1.1
-DNS=8.8.8.8
-```
-
-Matches all physical Ethernet interfaces (`Type=ether`, `Kind=!*`).
-
-**`etc/systemd/system/mnt-synology-harbor_srv.mount`** — NFS mount for the Synology share. Enabled in `build-image.sh`. Uses `soft` mount with a 30-second timeout so a NAS outage doesn't hang the system indefinitely.
-
-**`etc/systemd/system/docker.service.d/nfs-dependency.conf`** — Makes Docker wait for the NFS mount before starting, so Compose stacks that reference NFS paths don't fail on boot.
-
-**`etc/ssh/sshd_config.d/10-archiso.conf`** — SSH hardening:
-
-```
-PasswordAuthentication no
-PermitRootLogin prohibit-password
-AuthorizedKeysCommand none
-```
-
-`AuthorizedKeysCommand none` overrides the default Arch sshd config that runs `userdbctl` for every auth attempt. That default causes spurious log errors and is unnecessary here.
-
-**`etc/mkinitcpio.conf.d/archiso.conf`** and **`etc/mkinitcpio.d/linux.preset`** — Custom initramfs hooks and preset. Ensures the initramfs built during `build-image.sh` uses the correct hooks for booting from an ext4 image.
-
-**`root/.ssh/authorized_keys`** — SSH public key for root login. This is the only authentication method.
+See [`airootfs/README.md`](airootfs/README.md) for documentation of every config file.
 
 ## Making changes
 
