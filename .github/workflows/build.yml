@@ -8,16 +8,14 @@ on:
       - 'profile/**'
       - 'scripts/**'
       - '.github/workflows/**'
-    paths-ignore:
-      - '**/README.md'
+      - '!**/README.md'
   pull_request:
     branches: [main]
     paths:
       - 'profile/**'
       - 'scripts/**'
       - '.github/workflows/**'
-    paths-ignore:
-      - '**/README.md'
+      - '!**/README.md'
 
 jobs:
   check:
