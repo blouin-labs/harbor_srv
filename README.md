@@ -18,6 +18,7 @@ The core idea: the OS is a disposable, reproducible artifact. When something goe
   - [Deploying an update](#deploying-an-update)
   - [SSH access](#ssh-access)
 - [Making changes](#making-changes)
+- [Updating the stack](#updating-the-stack)
 
 ## Architecture
 
@@ -124,3 +125,17 @@ Push to a branch and open a PR. CI will build and upload the artifact. Merge and
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org) (`feat:`, `fix:`, `docs:`, `chore:`, etc.).
 
 See [`profile/README.md`](profile/README.md) and [`scripts/README.md`](scripts/README.md) for details.
+
+## Updating the stack
+
+All package versions and the build environment are pinned to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/build.yml`** only — two adjacent values:
+
+1. Update `ARCH_SNAPSHOT` to the new date (`YYYY/MM/DD`). Check [archive.archlinux.org/repos](https://archive.archlinux.org/repos/) to confirm the date is available.
+2. Update the `container.image` digest to match. Fetch it with:
+
+```bash
+docker manifest inspect --verbose archlinux/archlinux:latest \
+  | grep -m1 '"digest"' | awk -F'"' '{print $4}'
+```
+
+3. Open a PR — CI builds the new image for review before it reaches the server.
