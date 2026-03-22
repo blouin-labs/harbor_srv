@@ -3,13 +3,11 @@ base
 linux
 linux-firmware
 mkinitcpio
+intel-ucode
 openssh
 pv
 
-# boot
-efibootmgr
-
-# Harbor Serve
+# Harbor Srv
 docker
 docker-compose
 nfs-utils

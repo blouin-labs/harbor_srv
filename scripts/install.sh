@@ -121,19 +121,22 @@ EOF
 cat > "${MOUNT_DIR}/boot/efi/loader/entries/harbor-a.conf" << EOF
 title   Harbor Srv (Root A)
 linux   /vmlinuz-linux
+initrd  /intel-ucode.img
 initrd  /initramfs-linux.img
-options root=PARTUUID=${ROOT_A_PARTUUID} rw
+options root=PARTUUID=${ROOT_A_PARTUUID} rw ipv6.disable=1
 EOF
 
 cat > "${MOUNT_DIR}/boot/efi/loader/entries/harbor-b.conf" << EOF
 title   Harbor Srv (Root B)
 linux   /vmlinuz-linux
+initrd  /intel-ucode.img
 initrd  /initramfs-linux.img
-options root=PARTUUID=${ROOT_B_PARTUUID} rw
+options root=PARTUUID=${ROOT_B_PARTUUID} rw ipv6.disable=1
 EOF
 
-# Copy kernel and initramfs to ESP so systemd-boot can find them
+# Copy kernel, microcode, and initramfs to ESP so systemd-boot can find them
 cp "${MOUNT_DIR}/boot/vmlinuz-linux" "${MOUNT_DIR}/boot/efi/"
+cp "${MOUNT_DIR}/boot/intel-ucode.img" "${MOUNT_DIR}/boot/efi/"
 cp "${MOUNT_DIR}/boot/initramfs-linux.img" "${MOUNT_DIR}/boot/efi/"
 
 # Create fstab

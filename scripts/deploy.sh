@@ -96,7 +96,7 @@ EOF
 mkdir -p "${MOUNT_DIR}/etc/harbor"
 cp "$CONF" "${MOUNT_DIR}/etc/harbor/partitions.conf"
 
-# Copy kernel and initramfs to ESP
+# Copy kernel, microcode, and initramfs to ESP
 ESP_MOUNT=$(findmnt -n -o TARGET /boot/efi 2>/dev/null || echo "")
 if [ -z "$ESP_MOUNT" ]; then
     mkdir -p /boot/efi
@@ -104,6 +104,7 @@ if [ -z "$ESP_MOUNT" ]; then
     ESP_MOUNT="/boot/efi"
 fi
 cp "${MOUNT_DIR}/boot/vmlinuz-linux" "${ESP_MOUNT}/"
+cp "${MOUNT_DIR}/boot/intel-ucode.img" "${ESP_MOUNT}/"
 cp "${MOUNT_DIR}/boot/initramfs-linux.img" "${ESP_MOUNT}/"
 
 # Write boot entry with try-counter for automatic fallback.
@@ -116,8 +117,9 @@ rm -f "${ENTRIES_DIR}/${TARGET_ENTRY_BASE}"+*.conf
 cat > "${ENTRIES_DIR}/${TARGET_ENTRY}" << EOF
 title   Harbor Srv (${TARGET_LABEL})
 linux   /vmlinuz-linux
+initrd  /intel-ucode.img
 initrd  /initramfs-linux.img
-options root=PARTUUID=${TARGET_PARTUUID} rw
+options root=PARTUUID=${TARGET_PARTUUID} rw ipv6.disable=1
 EOF
 
 # Set default using a glob so it matches both the counted and blessed forms.

@@ -57,8 +57,18 @@ mount "$LOOP_DEV" "${WORK_DIR}/mnt"
 mapfile -t PACKAGES < <(sed -e '/^#/d' -e '/^$/d' "${PROFILE_DIR}/packages.x86_64")
 echo ":: Installing ${#PACKAGES[@]} packages via pacstrap..."
 
-# --- Pacstrap (without running mkinitcpio via pacman hooks) ---
+# --- Patch pacman.conf snapshot date ---
+# ARCH_SNAPSHOT is set in .github/workflows/build.yml and substituted into the
+# archive.archlinux.org Server URLs. Update it there to upgrade the full stack.
 PACMAN_CONF="${PROFILE_DIR}/pacman.conf"
+if [ -f "$PACMAN_CONF" ]; then
+    PATCHED_PACMAN_CONF="${WORK_DIR}/pacman.conf"
+    sed "s|@ARCH_SNAPSHOT@|${ARCH_SNAPSHOT:?ARCH_SNAPSHOT env var is required}|g" \
+        "$PACMAN_CONF" > "$PATCHED_PACMAN_CONF"
+    PACMAN_CONF="$PATCHED_PACMAN_CONF"
+fi
+
+# --- Pacstrap (without running mkinitcpio via pacman hooks) ---
 
 # Create a hook override to skip mkinitcpio during pacstrap.
 # We run it manually after copying the overlay with our custom preset/config.

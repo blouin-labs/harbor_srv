@@ -1,6 +1,12 @@
 ---
 name: Build
 
+# Snapshot date and Docker image digest are pinned together.
+# To upgrade the full stack, update both values here and open a PR.
+# See README.md "Updating the stack" for the full process.
+env:
+  ARCH_SNAPSHOT: "2026/03/22"  # archive.archlinux.org date — update to upgrade
+
 on:
   push:
     branches: [test]
@@ -21,7 +27,8 @@ jobs:
   check:
     runs-on: ubuntu-latest
     container:
-      image: archlinux/archlinux:latest
+      # archlinux/archlinux:latest — pinned digest matches ARCH_SNAPSHOT above
+      image: archlinux/archlinux@sha256:0e2b66488c60a96c65041cde5e754957a880b760dd4f00865ed09c131a51cd44
     steps:
       - uses: actions/checkout@v5
 
@@ -41,7 +48,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: check
     container:
-      image: archlinux/archlinux:latest
+      # archlinux/archlinux:latest — pinned digest matches ARCH_SNAPSHOT above
+      image: archlinux/archlinux@sha256:0e2b66488c60a96c65041cde5e754957a880b760dd4f00865ed09c131a51cd44
       options: --privileged
     steps:
       - uses: actions/checkout@v5
