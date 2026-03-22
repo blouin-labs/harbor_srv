@@ -1,37 +1,18 @@
 # shellcheck shell=bash
+
+# run_hook is intentionally empty — its presence causes mkinitcpio to add this
+# hook to the HOOKS list in /config, which makes run_hookfunctions source this
+# file. The real payload is the launch_interactive_shell override below.
+run_hook() { :; }
+
 launch_interactive_shell() {
     echo ":: Boot failure on headless server — attempting automatic slot failover..."
 
-    local conf="/new_root/etc/harbor/partitions.conf"
-    if [[ ! -f "$conf" ]]; then
-        echo ":: Partition config not found — blind reboot in 5s"
-        sleep 5
-        echo 1 > /proc/sys/kernel/sysrq
-        echo b > /proc/sysrq-trigger
-        return
-    fi
-
-    # shellcheck source=/dev/null
-    source "$conf"
-
-    # Identify the failing slot from kernel cmdline
-    local current_partuuid
-    current_partuuid=$(grep -o 'root=PARTUUID=[^ ]*' /proc/cmdline | cut -d= -f3)
-
-    local current_entry other_entry
-    if [[ "$current_partuuid" == "$ROOT_A_PARTUUID" ]]; then
-        current_entry="harbor-a"
-        other_entry="harbor-b"
-    else
-        current_entry="harbor-b"
-        other_entry="harbor-a"
-    fi
-
-    # Mount ESP
+    # Find the ESP by filesystem label (set by install.sh: mkfs.fat -n HARBOR_ESP)
     local esp_dev
-    esp_dev=$(blkid -t "PARTUUID=$ESP_PARTUUID" -o device)
+    esp_dev=$(blkid -t LABEL=HARBOR_ESP -o device)
     if [[ -z "$esp_dev" ]]; then
-        echo ":: ESP device not found — blind reboot in 5s"
+        echo ":: ESP not found — blind reboot in 5s"
         sleep 5
         echo 1 > /proc/sys/kernel/sysrq
         echo b > /proc/sysrq-trigger
@@ -41,16 +22,37 @@ launch_interactive_shell() {
     mkdir -p /run/harbor-esp
     mount "$esp_dev" /run/harbor-esp
 
-    # Remove failing slot's entry (blessed and all counted variants)
-    rm -f /run/harbor-esp/loader/entries/${current_entry}.conf
-    rm -f /run/harbor-esp/loader/entries/${current_entry}+*.conf
+    # Get the failing root PARTUUID from kernel cmdline
+    local current_partuuid
+    current_partuuid=$(grep -o 'root=PARTUUID=[^ ]*' /proc/cmdline | cut -d= -f3)
 
-    # Switch default to the other slot
-    sed -i "s|^default .*|default ${other_entry}*|" /run/harbor-esp/loader/loader.conf
+    # Find which boot entry contains this PARTUUID — that's the failing slot
+    local failing_base="" other_base="" entry base
+    for entry in /run/harbor-esp/loader/entries/harbor-*.conf; do
+        base=$(basename "$entry" | sed 's/[+.].*//')
+        if grep -q "$current_partuuid" "$entry" 2>/dev/null; then
+            failing_base="$base"
+        else
+            other_base="$base"
+        fi
+    done
+
+    if [[ -z "$failing_base" || -z "$other_base" ]]; then
+        echo ":: Could not identify slots — blind reboot in 5s"
+        umount /run/harbor-esp
+        sleep 5
+        echo 1 > /proc/sys/kernel/sysrq
+        echo b > /proc/sysrq-trigger
+        return
+    fi
+
+    # Switch default to the other slot (keep the failing entry for debugging —
+    # deploy.sh cleans up old entries when it next targets that slot)
+    sed -i "s|^default .*|default ${other_base}*|" /run/harbor-esp/loader/loader.conf
 
     umount /run/harbor-esp
 
-    echo ":: Switched boot default from ${current_entry} to ${other_entry} — rebooting..."
+    echo ":: Switched boot default from ${failing_base} to ${other_base} — rebooting..."
     sleep 2
     echo 1 > /proc/sys/kernel/sysrq
     echo b > /proc/sysrq-trigger
