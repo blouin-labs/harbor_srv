@@ -9,4 +9,5 @@ syslinux
 
 # Harbor Serve
 docker
+docker-compose
 nfs-utils
