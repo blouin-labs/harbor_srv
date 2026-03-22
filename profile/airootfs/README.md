@@ -12,6 +12,7 @@ Config overlay copied verbatim into the root filesystem during `build-image.sh`.
 - [Networking](#networking)
 - [NFS mount](#nfs-mount)
 - [Initramfs](#initramfs)
+- [Runner](#runner)
 - [Locale](#locale)
 - [Credentials](#credentials)
 
@@ -76,6 +77,26 @@ Build-time mkinitcpio hook. Bundles `blkid`, `sed`, and the runtime hook script 
 Runtime mkinitcpio hook. Redefines `launch_interactive_shell` so that any initramfs-stage boot failure (missing init, failed root mount, etc.) triggers automatic slot failover instead of dropping to an interactive emergency shell — which would stall a headless server indefinitely.
 
 On failure: reads the failing slot's PARTUUID from `/proc/cmdline`, loads `/new_root/etc/harbor/partitions.conf`, mounts the ESP, removes the failing slot's boot entries, flips `loader.conf` to the other slot, and reboots. Falls back to a blind sysrq reboot (consuming one try-counter cycle) if the partition config or ESP are unreachable.
+
+---
+
+## Runner
+
+### [`usr/local/bin/harbor-runner-bootstrap`](usr/local/bin/harbor-runner-bootstrap)
+
+One-shot script that downloads and registers the GitHub Actions self-hosted runner on first boot. Idempotent: if the runner is already registered (`.runner` exists on the NFS share), exits immediately. Otherwise downloads the latest runner release to the NFS share and registers it using the token file.
+
+The token file is deleted after registration — it's single-use and shouldn't persist on the NFS share.
+
+**First-time setup:** Before booting the image for the first time, place a GitHub Actions registration token at `/mnt/synology/harbor_srv/runner/token` on the NFS share. Generate one at: repo Settings → Actions → Runners → New self-hosted runner. The token is deleted automatically after successful registration.
+
+### [`etc/systemd/system/harbor-runner-bootstrap.service`](etc/systemd/system/harbor-runner-bootstrap.service)
+
+Runs `harbor-runner-bootstrap` as a one-shot service after the NFS mount comes up. Uses `RemainAfterExit=yes` so the service stays active after the script exits, which allows `harbor-runner.service` to depend on it correctly.
+
+### [`etc/systemd/system/harbor-runner.service`](etc/systemd/system/harbor-runner.service)
+
+Runs the GitHub Actions runner (`run.sh` on the NFS share) as a persistent service. Depends on both the bootstrap service (runner must be registered first) and the NFS mount (`BindsTo` — stops if NFS goes away). The runner binary lives on NFS and survives A/B slot switches; it also self-updates when GitHub requires a newer version.
 
 ---
 

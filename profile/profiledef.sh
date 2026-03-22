@@ -10,4 +10,5 @@ file_permissions=(
   ["/root"]="0:0:700"
   ["/root/.ssh"]="0:0:700"
   ["/root/.ssh/authorized_keys"]="0:0:600"
+  ["/usr/local/bin/harbor-runner-bootstrap"]="0:0:755"
 )

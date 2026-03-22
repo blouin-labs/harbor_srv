@@ -1,0 +1,15 @@
+[Unit]
+Description=GitHub Actions self-hosted runner
+After=harbor-runner-bootstrap.service
+Requires=harbor-runner-bootstrap.service
+BindsTo=mnt-synology-harbor_srv.mount
+
+[Service]
+Type=simple
+ExecStart=/mnt/synology/harbor_srv/runner/run.sh
+WorkingDirectory=/mnt/synology/harbor_srv/runner
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
