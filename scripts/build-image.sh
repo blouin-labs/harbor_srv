@@ -113,7 +113,7 @@ echo ":: Applying file permissions..."
 echo ":: Configuring system..."
 
 # Hostname
-echo "nest" > "${WORK_DIR}/mnt/etc/hostname"
+echo "harbor-srv" > "${WORK_DIR}/mnt/etc/hostname"
 
 # Locale
 arch-chroot "${WORK_DIR}/mnt" locale-gen 2>/dev/null || true
