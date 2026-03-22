@@ -119,7 +119,7 @@ title   Harbor Srv (${TARGET_LABEL})
 linux   /vmlinuz-linux
 initrd  /intel-ucode.img
 initrd  /initramfs-linux.img
-options root=PARTUUID=${TARGET_PARTUUID} rw ipv6.disable=1
+options root=PARTUUID=${TARGET_PARTUUID} rw ipv6.disable=1 panic=10
 EOF
 
 # Set default using a glob so it matches both the counted and blessed forms.
