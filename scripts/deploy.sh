@@ -41,18 +41,21 @@ echo ":: Active root: ${ACTIVE_ROOT}"
 
 if [ "$ACTIVE_ROOT" = "$ROOT_A_DEV" ]; then
     TARGET_DEV="$ROOT_B_DEV"
-    TARGET_ENTRY="harbor-b.conf"
+    TARGET_ENTRY_BASE="harbor-b"
     TARGET_LABEL="Root B"
     TARGET_PARTUUID="$ROOT_B_PARTUUID"
 elif [ "$ACTIVE_ROOT" = "$ROOT_B_DEV" ]; then
     TARGET_DEV="$ROOT_A_DEV"
-    TARGET_ENTRY="harbor-a.conf"
+    TARGET_ENTRY_BASE="harbor-a"
     TARGET_LABEL="Root A"
     TARGET_PARTUUID="$ROOT_A_PARTUUID"
 else
     echo "ERROR: Active root ${ACTIVE_ROOT} doesn't match Root A (${ROOT_A_DEV}) or Root B (${ROOT_B_DEV})" >&2
     exit 1
 fi
+
+BOOT_TRIES=3
+TARGET_ENTRY="${TARGET_ENTRY_BASE}+${BOOT_TRIES}.conf"
 
 echo ":: Target: ${TARGET_LABEL} (${TARGET_DEV})"
 
@@ -87,10 +90,25 @@ fi
 cp "${MOUNT_DIR}/boot/vmlinuz-linux" "${ESP_MOUNT}/"
 cp "${MOUNT_DIR}/boot/initramfs-linux.img" "${ESP_MOUNT}/"
 
-# Switch default boot entry
-sed -i "s|^default .*|default ${TARGET_ENTRY}|" "${ESP_MOUNT}/loader/loader.conf"
+# Write boot entry with try-counter for automatic fallback.
+# systemd-boot decrements the counter on each boot attempt.
+# systemd-bless-boot.service renames it to the blessed form on success.
+# If all tries are exhausted, systemd-boot skips this entry and falls back.
+ENTRIES_DIR="${ESP_MOUNT}/loader/entries"
+rm -f "${ENTRIES_DIR}/${TARGET_ENTRY_BASE}.conf"
+rm -f "${ENTRIES_DIR}/${TARGET_ENTRY_BASE}"+*.conf
+cat > "${ENTRIES_DIR}/${TARGET_ENTRY}" << EOF
+title   Harbor Srv (${TARGET_LABEL})
+linux   /vmlinuz-linux
+initrd  /initramfs-linux.img
+options root=PARTUUID=${TARGET_PARTUUID} rw
+EOF
 
-echo ":: Boot default set to: ${TARGET_ENTRY}"
+# Set default using a glob so it matches both the counted and blessed forms.
+# e.g. "harbor-b*" matches "harbor-b+3.conf", "harbor-b+2-1.conf", "harbor-b.conf"
+sed -i "s|^default .*|default ${TARGET_ENTRY_BASE}*|" "${ESP_MOUNT}/loader/loader.conf"
+
+echo ":: Boot default set to: ${TARGET_ENTRY} (${BOOT_TRIES} tries before fallback)"
 
 umount "$MOUNT_DIR"
 rmdir "$MOUNT_DIR"
