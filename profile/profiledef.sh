@@ -5,7 +5,9 @@
 # Used by scripts/build-image.sh for file_permissions.
 
 file_permissions=(
+  ["/"]="0:0:755"
   ["/etc/shadow"]="0:0:400"
+  ["/root"]="0:0:700"
   ["/root/.ssh"]="0:0:700"
   ["/root/.ssh/authorized_keys"]="0:0:600"
 )
