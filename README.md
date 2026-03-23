@@ -1,6 +1,6 @@
 # harbor_srv
 
-[![Build](https://github.com/JCBlouin/harbor_srv/actions/workflows/build.yml/badge.svg)](https://github.com/JCBlouin/harbor_srv/actions/workflows/build.yml)
+[![CI](https://github.com/JCBlouin/harbor_srv/actions/workflows/ci.yml/badge.svg?branch=test)](https://github.com/JCBlouin/harbor_srv/actions/workflows/ci.yml)
 
 A bare-minimum, stateless Arch Linux server for hosting Docker containers on a Lenovo ThinkPad connected to a Synology NAS.
 
@@ -18,6 +18,7 @@ The core idea: the OS is a disposable, reproducible artifact. When something goe
   - [Deploying an update](#deploying-an-update)
   - [SSH access](#ssh-access)
 - [Making changes](#making-changes)
+  - [Branch workflow](#branch-workflow)
 - [Updating the stack](#updating-the-stack)
 
 ## Architecture
@@ -78,7 +79,8 @@ scripts/
   deploy.sh               Each release: writes image to inactive slot, reboots
 
 .github/workflows/
-  build.yml               CI pipeline: shellcheck + build image + upload artifact
+  ci.yml                  Runs on push/PR to test: shellcheck + build image + upload artifact
+  deploy.yml              Runs on push to main (or manually): deploys last successful test artifact
 ```
 
 ## Getting started
@@ -98,17 +100,11 @@ bash install.sh /dev/nvme0n1 harbor_srv-root.img.zst
 
 ### Deploying an update
 
-```bash
-# Download latest artifact
-gh run download <run-id> -n harbor_srv-root -D /tmp/deploy
+Deployments are automatic — merging `test` into `main` triggers `deploy.yml`, which downloads the last successful CI artifact from `test` and runs `harbor-deploy` on the server. No manual steps required.
 
-# Transfer and run
-scp /tmp/deploy/harbor_srv-root.img.zst root@192.168.1.5:/tmp/
-scp scripts/deploy.sh root@192.168.1.5:/tmp/
-ssh root@192.168.1.5 "bash /tmp/deploy.sh /tmp/harbor_srv-root.img.zst"
-```
+To trigger a deploy manually (e.g. after a workflow-only change that didn't fire the path filter):
 
-The server will write the image to the inactive partition and reboot automatically.
+1. Go to **Actions → Deploy → Run workflow** in the GitHub UI.
 
 ### SSH access
 
@@ -120,15 +116,34 @@ ssh -i ~/.ssh/harbor_srv root@192.168.1.5
 
 All OS configuration lives in `profile/`. To add a package, add it to `profile/packages.x86_64`. To add or change a config file, add it under `profile/airootfs/` at the path it should appear on the root filesystem.
 
-Push to a branch and open a PR. CI will build and upload the artifact. Merge and deploy.
-
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org) (`feat:`, `fix:`, `docs:`, `chore:`, etc.).
 
 See [`profile/README.md`](profile/README.md) and [`scripts/README.md`](scripts/README.md) for details.
 
+### Branch workflow
+
+```
+main        stable, production — only receives merges from test
+ └── test   staging — only receives merges from feature branches
+      └── your-branch   all work starts here
+```
+
+1. **Branch from `test`** — always, not from `main`:
+   ```bash
+   git checkout test && git pull
+   git checkout -b feat/your-change
+   ```
+2. **Open a PR targeting `test`** — CI runs `check` + `build`, producing an artifact.
+3. **Rebase and merge** into `test`.
+4. **Test manually** on the server (trigger a deploy via Actions if needed).
+5. **Open a PR from `test` to `main`** — no rebuild, just deploy.
+6. **Merge** — `deploy.yml` downloads the already-built artifact from step 2 and deploys it.
+
+> **Why branch from `test` and not `main`?** `test` is ahead of `main` by definition — it contains changes that have been built but not yet promoted. Branching from `main` causes duplicate commits with different SHAs once the branch is rebased onto `test`, leading to merge conflicts on the `test → main` PR.
+
 ## Updating the stack
 
-All package versions and the build environment are pinned to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/build.yml`** only — two adjacent values:
+All package versions and the build environment are pinned to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/ci.yml`** only — two adjacent values:
 
 1. Update `ARCH_SNAPSHOT` to the new date (`YYYY/MM/DD`). Check [archive.archlinux.org/repos](https://archive.archlinux.org/repos/) to confirm the date is available.
 2. Update the `container.image` digest to match. Fetch it with:
