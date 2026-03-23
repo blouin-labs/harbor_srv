@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# shellcheck shell=bash
+#
+# harbor-runner-bootstrap — Download and register the GitHub Actions runner
+#
+# Runs as a one-shot systemd service on first boot after the NFS share is
+# mounted. Idempotent: if the runner is already registered (.runner exists on
+# NFS), exits immediately. Otherwise downloads the latest runner tarball to
+# the NFS dir and registers with the token at $RUNNER_DIR/token.
+#
+# The token file is removed after registration (it's one-time use).
+# Subsequent boots skip straight to starting harbor-runner.service.
+#
+set -euo pipefail
+
+RUNNER_DIR="/mnt/synology/harbor_srv/runner"
+REPO_URL="https://github.com/JCBlouin/harbor_srv"
+
+# Synology exports the share root with POSIX mode 000 when Windows ACL is
+# enabled. Fix it every boot so non-root users can traverse the share.
+chmod 755 /mnt/synology/harbor_srv
+
+# Already registered — nothing to do
+if [[ -f "${RUNNER_DIR}/.runner" ]]; then
+    echo ":: Runner already registered, skipping bootstrap"
+    exit 0
+fi
+
+# Download runner if binary missing
+if [[ ! -f "${RUNNER_DIR}/run.sh" ]]; then
+    echo ":: Downloading GitHub Actions runner..."
+    VERSION=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest \
+        | jq -r '.tag_name | ltrimstr("v")')
+    mkdir -p "${RUNNER_DIR}"
+    curl -fsSL \
+        "https://github.com/actions/runner/releases/download/v${VERSION}/actions-runner-linux-x64-${VERSION}.tar.gz" \
+        | tar -xz -C "${RUNNER_DIR}"
+fi
+
+# Ensure runner user owns the NFS directory
+chown -R runner:runner "${RUNNER_DIR}"
+
+# Register
+if [[ ! -f "${RUNNER_DIR}/token" ]]; then
+    echo ":: ERROR: ${RUNNER_DIR}/token not found" >&2
+    echo "::   Generate a registration token at:" >&2
+    echo "::   ${REPO_URL}/settings/actions/runners/new" >&2
+    echo "::   and write it to ${RUNNER_DIR}/token" >&2
+    exit 1
+fi
+TOKEN=$(cat "${RUNNER_DIR}/token")
+
+echo ":: Registering runner with GitHub..."
+HOME=/var/lib/runner runuser -u runner -- "${RUNNER_DIR}/config.sh" \
+    --url        "${REPO_URL}" \
+    --token      "${TOKEN}" \
+    --name       "harbor-srv" \
+    --labels     "self-hosted,linux,x64,harbor-srv" \
+    --work       "${RUNNER_DIR}/_work" \
+    --unattended \
+    --replace
+
+# Token is one-time use — remove it so it's not sitting on the NFS share
+rm -f "${RUNNER_DIR}/token"
+echo ":: Token removed. Runner registered successfully."

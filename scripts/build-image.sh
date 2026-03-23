@@ -135,7 +135,9 @@ arch-chroot "${WORK_DIR}/mnt" systemctl enable \
     sshd \
     docker \
     mnt-synology-harbor_srv.mount \
-    systemd-bless-boot.service
+    systemd-bless-boot.service \
+    harbor-runner-bootstrap.service \
+    harbor-runner.service
 
 # Generate initramfs (now with our custom preset and hooks config)
 arch-chroot "${WORK_DIR}/mnt" mkinitcpio -P

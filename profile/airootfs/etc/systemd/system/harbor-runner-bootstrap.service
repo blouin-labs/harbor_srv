@@ -1,0 +1,13 @@
+[Unit]
+Description=Bootstrap GitHub Actions runner from NFS
+After=mnt-synology-harbor_srv.mount network-online.target
+Requires=mnt-synology-harbor_srv.mount
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/harbor-runner-bootstrap
+
+[Install]
+WantedBy=multi-user.target

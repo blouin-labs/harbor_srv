@@ -11,3 +11,9 @@ pv
 docker
 docker-compose
 nfs-utils
+
+# GitHub Actions runner dependencies
+curl
+jq
+icu
+sudo

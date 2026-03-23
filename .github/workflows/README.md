@@ -2,7 +2,13 @@
 
 # .github/workflows/
 
-CI pipeline for harbor_srv. Changes to `profile/` or `scripts/` automatically build and upload the root image. README-only changes do not trigger a build.
+CI pipeline for harbor_srv. Uses a three-branch model:
+
+- **Dev branches** — local development, PR'd into `test`
+- **`test`** — integration branch; PRs and pushes trigger CI (shellcheck + image build)
+- **`main`** — stable, known-good; manual merge from `test` after verifying on the server. No CI triggers.
+
+README-only changes do not trigger a build.
 
 ## Table of Contents
 
@@ -22,7 +28,7 @@ Two-job pipeline: `check` must pass before `build` runs.
 
 Runs on:
 - Push to the `test` branch
-- Pull requests targeting `main`
+- Pull requests targeting `test`
 
 Only fires when files under `profile/**`, `scripts/**`, or `.github/workflows/**` change. Changes to `README.md` files are explicitly excluded.
 

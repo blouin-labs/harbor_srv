@@ -9,14 +9,14 @@ env:
 
 on:
   push:
-    branches: [test]
+    branches: [test, main]
     paths:
       - 'profile/**'
       - 'scripts/**'
       - '.github/workflows/**'
       - '!**/README.md'
   pull_request:
-    branches: [main]
+    branches: [test]
     paths:
       - 'profile/**'
       - 'scripts/**'
@@ -24,8 +24,27 @@ on:
       - '!**/README.md'
 
 jobs:
-  check:
+  select-runner:
     runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.pick.outputs.runner }}
+    steps:
+      - name: Pick runner
+        id: pick
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          STATUS=$(gh api repos/${{ github.repository }}/actions/runners \
+            --jq '.runners[] | select(.name=="harbor-srv") | .status' 2>/dev/null || echo "")
+          if [ "$STATUS" = "online" ]; then
+            echo 'runner=["self-hosted","harbor-srv"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'runner=["ubuntu-latest"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  check:
+    runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
+    needs: select-runner
     container:
       # archlinux/archlinux:latest — pinned digest matches ARCH_SNAPSHOT above
       image: archlinux/archlinux@sha256:0e2b66488c60a96c65041cde5e754957a880b760dd4f00865ed09c131a51cd44
@@ -43,10 +62,12 @@ jobs:
           shellcheck scripts/build-image.sh
           shellcheck scripts/install.sh
           shellcheck scripts/deploy.sh
+          shellcheck profile/airootfs/usr/local/bin/harbor-runner-bootstrap
+          shellcheck profile/airootfs/usr/local/sbin/harbor-deploy
 
   build:
-    runs-on: ubuntu-latest
-    needs: check
+    runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
+    needs: [check, select-runner]
     container:
       # archlinux/archlinux:latest — pinned digest matches ARCH_SNAPSHOT above
       image: archlinux/archlinux@sha256:0e2b66488c60a96c65041cde5e754957a880b760dd4f00865ed09c131a51cd44
@@ -68,3 +89,19 @@ jobs:
           name: harbor_srv-root
           path: output/
           retention-days: 30
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: [self-hosted, harbor-srv]
+    steps:
+      - name: Download root image
+        uses: actions/download-artifact@v6
+        with:
+          name: harbor_srv-root
+          path: /tmp/harbor-deploy/
+
+      - name: Deploy
+        run: |
+          mv /tmp/harbor-deploy/harbor_srv-root.img.zst /tmp/harbor_srv-root.img.zst
+          sudo /usr/local/sbin/harbor-deploy
