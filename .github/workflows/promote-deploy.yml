@@ -1,0 +1,76 @@
+---
+name: Promote and Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "ok reboot" to confirm. The server will reboot.'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.find-run.outputs.run_id }}
+    steps:
+      - name: Confirm
+        run: |
+          if [ "${{ inputs.confirm }}" != "ok reboot" ]; then
+            echo "ERROR: type exactly 'ok reboot' to confirm." >&2
+            exit 1
+          fi
+
+      - name: Verify CI is green on staging
+        id: find-run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?branch=staging&status=success&per_page=1" \
+            --jq '.workflow_runs[0].id')
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "ERROR: no successful CI build found on staging" >&2
+            exit 1
+          fi
+          echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Fast-forward main to staging
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA=$(gh api "repos/${{ github.repository }}/git/refs/heads/staging" \
+            --jq '.object.sha')
+          gh api "repos/${{ github.repository }}/git/refs/heads/main" \
+            --method PATCH \
+            --field sha="$SHA" \
+            --field force=false
+
+  deploy:
+    needs: promote
+    runs-on: [self-hosted, harbor-srv]
+    steps:
+      - name: Download root image artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ARTIFACT_URL=$(curl -sf \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ needs.promote.outputs.run_id }}/artifacts" \
+            | jq -r '.artifacts[] | select(.name=="harbor_srv-root") | .archive_download_url')
+          mkdir -p /tmp/harbor-deploy/
+          curl -sL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -o /tmp/harbor-deploy/artifact.zip \
+            "$ARTIFACT_URL"
+          bsdtar -xf /tmp/harbor-deploy/artifact.zip -C /tmp/harbor-deploy/
+          rm /tmp/harbor-deploy/artifact.zip
+
+      - name: Deploy
+        run: |
+          mv /tmp/harbor-deploy/harbor_srv-root.img.zst /tmp/harbor_srv-root.img.zst
+          sudo /usr/local/sbin/harbor-deploy
