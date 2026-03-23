@@ -8,15 +8,23 @@ Working conventions for this repository. Keep this file up to date as the projec
 - **`main`** — production. Promoted from `staging` only, never committed to directly.
 - **Feature branches** — `feat/`, `fix/`, `docs/`, `chore/` prefixes. Always branch from `staging`.
 
-Promotion to production is done via the **Promote** workflow in GitHub Actions (Actions → Promote → Run workflow). Never push directly to `main`.
+Promotion to production is done via the **Promote and Deploy** or **Promote Only** workflows in GitHub Actions. Never push directly to `main`.
 
 Never create merge commits. Always rebase feature branches onto `staging` before opening a PR.
 
+At the start of every session, fetch and pull `staging` before branching:
+```bash
+git checkout staging && git pull
+```
+Never branch from a stale or in-progress branch — the local tree may be behind remote.
+
 ## CI/CD
 
-- `ci.yml` — triggers on push/PR to `staging`. Runs shellcheck then builds the root image. Artifacts retained 30 days.
-- `promote.yml` — `workflow_dispatch` only. Verifies CI is green on `staging`, then fast-forwards `main` to `staging`. Requires typing `"promote"` to confirm (server will reboot).
-- `deploy.yml` — triggers on push to `main`. Downloads the last successful CI artifact from `staging` and flashes the server via the self-hosted runner (`harbor-srv`).
+- `check.yml` — triggers on PR to `staging`. Runs shellcheck only. Fast gate — no build.
+- `build.yml` — triggers on push to `staging`. Builds the root image, uploads artifact named `harbor_srv-root-{sha}`. Artifacts retained 30 days.
+- `select-runner.yml` — reusable `workflow_call`. Picks the best available runner: `wsl-docker-runner` → `harbor-srv-docker` → `ubuntu-latest`. `harbor-srv` (bare-metal) is excluded — reserved for deploy only.
+- `promote.yml` — `workflow_dispatch` only. Verifies `build.yml` is green on `staging`, then fast-forwards `main`. Requires typing `"promote"` to confirm.
+- `promote-deploy.yml` — `workflow_dispatch` only. Promotes then deploys: downloads the `harbor_srv-root-{sha}` artifact and flashes the server via `harbor-srv`. Requires typing `"ok reboot"` to confirm. Server will reboot.
 
 No deploy ever rebuilds the image — it always uses the artifact already produced by CI on `staging`.
 
