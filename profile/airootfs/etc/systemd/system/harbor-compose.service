@@ -1,0 +1,13 @@
+[Unit]
+Description=Start Docker Compose stacks from NFS share
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/harbor-compose-up
+ExecStop=/usr/local/bin/harbor-compose-down
+
+[Install]
+WantedBy=multi-user.target

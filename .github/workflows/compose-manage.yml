@@ -1,0 +1,21 @@
+name: Compose Manage
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Action to perform
+        required: true
+        type: choice
+        options:
+          - rescan
+          - update
+          - stop
+          - start
+
+jobs:
+  manage:
+    runs-on: harbor-srv
+    steps:
+      - name: Run harbor-compose-ctl
+        run: sudo /usr/local/sbin/harbor-compose-ctl "${{ inputs.action }}"
