@@ -17,3 +17,4 @@ file_permissions=(
   ["/etc/sudoers.d/runner"]="0:0:440"
   ["/var/lib/runner"]="968:968:700"
 )
+
