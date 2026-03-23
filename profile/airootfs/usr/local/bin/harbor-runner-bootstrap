@@ -33,6 +33,9 @@ if [[ ! -f "${RUNNER_DIR}/run.sh" ]]; then
         | tar -xz -C "${RUNNER_DIR}"
 fi
 
+# Ensure runner user owns the NFS directory
+chown -R runner:runner "${RUNNER_DIR}"
+
 # Register
 if [[ ! -f "${RUNNER_DIR}/token" ]]; then
     echo ":: ERROR: ${RUNNER_DIR}/token not found" >&2
@@ -44,7 +47,7 @@ fi
 TOKEN=$(cat "${RUNNER_DIR}/token")
 
 echo ":: Registering runner with GitHub..."
-"${RUNNER_DIR}/config.sh" \
+HOME=/var/lib/runner runuser -u runner -- "${RUNNER_DIR}/config.sh" \
     --url        "${REPO_URL}" \
     --token      "${TOKEN}" \
     --name       "harbor-srv" \

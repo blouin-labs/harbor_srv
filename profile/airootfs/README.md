@@ -82,9 +82,11 @@ On failure: reads the failing slot's PARTUUID from `/proc/cmdline`, loads `/new_
 
 ## Runner
 
+The GitHub Actions self-hosted runner runs as a dedicated `runner` user (UID 968) — never as root. The runner user is a member of the `docker` group so workflows can use Docker. The bootstrap script runs as root (to download and set up the NFS directory) but switches to the `runner` user for registration via `runuser`.
+
 ### [`usr/local/bin/harbor-runner-bootstrap`](usr/local/bin/harbor-runner-bootstrap)
 
-One-shot script that downloads and registers the GitHub Actions self-hosted runner on first boot. Idempotent: if the runner is already registered (`.runner` exists on the NFS share), exits immediately. Otherwise downloads the latest runner release to the NFS share and registers it using the token file.
+One-shot script that downloads and registers the GitHub Actions self-hosted runner on first boot. Idempotent: if the runner is already registered (`.runner` exists on the NFS share), exits immediately. Otherwise downloads the latest runner release to the NFS share, sets ownership to `runner:runner`, and registers using the token file as the `runner` user.
 
 The token file is deleted after registration — it's single-use and shouldn't persist on the NFS share.
 
@@ -96,7 +98,7 @@ Runs `harbor-runner-bootstrap` as a one-shot service after the NFS mount comes u
 
 ### [`etc/systemd/system/harbor-runner.service`](etc/systemd/system/harbor-runner.service)
 
-Runs the GitHub Actions runner (`run.sh` on the NFS share) as a persistent service. Depends on both the bootstrap service (runner must be registered first) and the NFS mount (`BindsTo` — stops if NFS goes away). The runner binary lives on NFS and survives A/B slot switches; it also self-updates when GitHub requires a newer version.
+Runs the GitHub Actions runner (`run.sh` on the NFS share) as the `runner` user. Depends on both the bootstrap service (runner must be registered first) and the NFS mount (`BindsTo` — stops if NFS goes away). The runner binary lives on NFS and survives A/B slot switches; it also self-updates when GitHub requires a newer version.
 
 ---
 
@@ -110,9 +112,17 @@ Sets the system locale to `C.UTF-8` — a minimal, dependency-free locale with f
 
 ## Credentials
 
+### [`etc/passwd`](etc/passwd)
+
+System user database. Declares all users including package-created system accounts and the `runner` user (UID 968). This overlay replaces the pacstrap-generated file — when adding a package that creates a system user, its entry must be added here.
+
 ### [`etc/shadow`](etc/shadow)
 
-Sets an empty root password. The account is accessible only via SSH key authentication (password auth is disabled in `sshd_config`). Issue #13 tracks locking this with a proper locked password entry (`!` in the password field) to prevent local console logins.
+Password database. Sets an empty root password (accessible only via SSH key — password auth is disabled in `sshd_config`). The `runner` user has a locked password (`!*`). Issue #13 tracks locking root's password too.
+
+### [`etc/group`](etc/group)
+
+System group database. Declares all groups including the `runner` group (GID 968). The `runner` user is a member of the `docker` group. Like `etc/passwd`, this overlay replaces the pacstrap-generated file.
 
 ### [`root/.ssh/authorized_keys`](root/.ssh/authorized_keys)
 

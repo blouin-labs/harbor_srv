@@ -6,6 +6,9 @@ BindsTo=mnt-synology-harbor_srv.mount
 
 [Service]
 Type=simple
+User=runner
+Group=runner
+Environment=HOME=/var/lib/runner
 ExecStart=/mnt/synology/harbor_srv/runner/run.sh
 WorkingDirectory=/mnt/synology/harbor_srv/runner
 Restart=on-failure
