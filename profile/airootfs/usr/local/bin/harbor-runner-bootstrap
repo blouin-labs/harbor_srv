@@ -16,6 +16,10 @@ set -euo pipefail
 RUNNER_DIR="/mnt/synology/harbor_srv/runner"
 REPO_URL="https://github.com/JCBlouin/harbor_srv"
 
+# Synology exports the share root with POSIX mode 000 when Windows ACL is
+# enabled. Fix it every boot so non-root users can traverse the share.
+chmod 755 /mnt/synology/harbor_srv
+
 # Already registered — nothing to do
 if [[ -f "${RUNNER_DIR}/.runner" ]]; then
     echo ":: Runner already registered, skipping bootstrap"
