@@ -9,7 +9,7 @@ env:
 
 on:
   push:
-    branches: [test]
+    branches: [test, main]
     paths:
       - 'profile/**'
       - 'scripts/**'
@@ -62,6 +62,8 @@ jobs:
           shellcheck scripts/build-image.sh
           shellcheck scripts/install.sh
           shellcheck scripts/deploy.sh
+          shellcheck profile/airootfs/usr/local/bin/harbor-runner-bootstrap
+          shellcheck profile/airootfs/usr/local/sbin/harbor-deploy
 
   build:
     runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
@@ -87,3 +89,19 @@ jobs:
           name: harbor_srv-root
           path: output/
           retention-days: 30
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: [self-hosted, harbor-srv]
+    steps:
+      - name: Download root image
+        uses: actions/download-artifact@v6
+        with:
+          name: harbor_srv-root
+          path: /tmp/harbor-deploy/
+
+      - name: Deploy
+        run: |
+          mv /tmp/harbor-deploy/harbor_srv-root.img.zst /tmp/harbor_srv-root.img.zst
+          sudo /usr/local/sbin/harbor-deploy

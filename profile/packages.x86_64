@@ -16,3 +16,4 @@ nfs-utils
 curl
 jq
 icu
+sudo
