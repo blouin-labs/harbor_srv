@@ -134,12 +134,12 @@ main        stable, production — only receives merges from test
    git checkout -b feat/your-change
    ```
 2. **Open a PR targeting `test`** — CI runs `check` + `build`, producing an artifact.
-3. **Rebase and merge** into `test`.
+3. **Rebase and merge** into `test` — keeps `test` linear (no merge commits from feature branches).
 4. **Test manually** on the server (trigger a deploy via Actions if needed).
 5. **Open a PR from `test` to `main`** — no rebuild, just deploy.
-6. **Merge** — `deploy.yml` downloads the already-built artifact from step 2 and deploys it.
+6. **Merge commit** (not squash, not rebase) — preserves the full commit history from `test` without rewriting SHAs. `deploy.yml` then downloads the already-built artifact from step 2 and deploys it.
 
-> **Why branch from `test` and not `main`?** `test` is ahead of `main` by definition — it contains changes that have been built but not yet promoted. Branching from `main` causes duplicate commits with different SHAs once the branch is rebased onto `test`, leading to merge conflicts on the `test → main` PR.
+> **Why branch from `test` and not `main`?** `test` is ahead of `main` by definition — it contains changes that have been built but not yet promoted. Branching from `main` means your feature branch is missing those changes, which causes conflicts when rebasing onto `test`.
 
 ## Updating the stack
 
