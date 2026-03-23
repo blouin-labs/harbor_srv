@@ -100,16 +100,14 @@ bash install.sh /dev/nvme0n1 harbor_srv-root.img.zst
 
 ### Deploying an update
 
-Deployments are automatic — promoting `staging` to `main` triggers `deploy.yml`, which downloads the last successful CI artifact from `staging` and runs `harbor-deploy` on the server. No manual steps required.
+Deployments are triggered by promoting `staging` to `main`. `deploy.yml` then downloads the last successful CI artifact from `staging` and runs `harbor-deploy` on the server. The server will reboot.
 
-To promote staging to production:
-```bash
-git push origin staging:main
-```
+To promote:
 
-To trigger a deploy manually (e.g. after a workflow-only change that didn't fire the path filter):
+1. Go to **Actions → Promote → Run workflow** in the GitHub UI.
+2. Type `promote` in the confirmation box and click **Run workflow**.
 
-1. Go to **Actions → Deploy → Run workflow** in the GitHub UI.
+The workflow verifies CI is green on `staging` before touching `main`. It will refuse to proceed if the latest build is not successful.
 
 ### SSH access
 
@@ -151,11 +149,7 @@ flowchart LR
    ```
 2. **Open a PR targeting `staging`** — CI runs `check` + `build` and uploads an artifact.
 3. **Rebase and merge** into `staging` (no merge commits).
-4. **Promote when ready:**
-   ```bash
-   git push origin staging:main
-   ```
-   `deploy.yml` picks up the artifact already built by CI and flashes the server. No rebuild.
+4. **Promote when ready** via **Actions → Promote → Run workflow**. Type `promote` to confirm. `deploy.yml` picks up the artifact already built by CI and flashes the server. No rebuild.
 
 > `staging` and `main` are always at the same commit after a promotion — divergence is structurally impossible with fast-forward-only merges.
 

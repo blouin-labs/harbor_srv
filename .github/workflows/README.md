@@ -15,17 +15,14 @@ README-only changes do not trigger a build.
 ```
 feat/my-thing  →  PR to staging  →  CI runs  →  merge (rebase)
                                                       ↓
-                             git push origin staging:main   ← promote when ready
+                             Actions → Promote → Run workflow   ← promote when ready
                                                       ↓
                                                deploy.yml fires
 ```
 
 Feature branch rule: always `git rebase origin/staging` before opening a PR. Never merge.
 
-Promote command (run locally, requires CI green on staging):
-```bash
-git push origin staging:main
-```
+Promote via **Actions → Promote → Run workflow**. Type `promote` to confirm. The workflow verifies CI is green on `staging` before touching `main`.
 
 ## Table of Contents
 
@@ -34,6 +31,7 @@ git push origin staging:main
   - [check job](#check-job)
   - [build job](#build-job)
   - [Artifact](#artifact)
+- [promote.yml](#promoteyml)
 - [deploy.yml](#deployyml)
 
 ---
@@ -81,6 +79,21 @@ Download with:
 ```bash
 gh run download <run-id> -n harbor_srv-root -D /tmp/deploy
 ```
+
+---
+
+## [promote.yml](promote.yml)
+
+`workflow_dispatch` only — triggered manually via the GitHub Actions UI.
+
+Requires typing `"promote"` in the confirmation input before any action is taken. Fails immediately if the input doesn't match.
+
+Steps:
+1. **Confirm** — validates the confirmation input.
+2. **Verify CI** — checks the latest `build` job on `staging` is `success`. Aborts if not.
+3. **Fast-forward main** — updates `main` to `staging`'s HEAD via the GitHub API (`force: false`). Will fail safely if the branches have somehow diverged.
+
+Triggers `deploy.yml` as a side effect of the push to `main`.
 
 ---
 
