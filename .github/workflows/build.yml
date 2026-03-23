@@ -24,26 +24,6 @@ on:
       - '!**/README.md'
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    container:
-      # archlinux/archlinux:latest — pinned digest matches ARCH_SNAPSHOT above
-      image: archlinux/archlinux@sha256:0e2b66488c60a96c65041cde5e754957a880b760dd4f00865ed09c131a51cd44
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Install shellcheck
-        run: |
-          pacman -Sy --needed --noconfirm archlinux-keyring
-          pacman --noconfirm -Syu --needed shellcheck
-
-      - name: Shellcheck
-        run: |
-          shellcheck profile/profiledef.sh
-          shellcheck scripts/build-image.sh
-          shellcheck scripts/install.sh
-          shellcheck scripts/deploy.sh
-
   select-runner:
     runs-on: ubuntu-latest
     outputs:
@@ -61,6 +41,27 @@ jobs:
           else
             echo 'runner=["ubuntu-latest"]' >> "$GITHUB_OUTPUT"
           fi
+
+  check:
+    runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
+    needs: select-runner
+    container:
+      # archlinux/archlinux:latest — pinned digest matches ARCH_SNAPSHOT above
+      image: archlinux/archlinux@sha256:0e2b66488c60a96c65041cde5e754957a880b760dd4f00865ed09c131a51cd44
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install shellcheck
+        run: |
+          pacman -Sy --needed --noconfirm archlinux-keyring
+          pacman --noconfirm -Syu --needed shellcheck
+
+      - name: Shellcheck
+        run: |
+          shellcheck profile/profiledef.sh
+          shellcheck scripts/build-image.sh
+          shellcheck scripts/install.sh
+          shellcheck scripts/deploy.sh
 
   build:
     runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
