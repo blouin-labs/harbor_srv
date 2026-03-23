@@ -7,6 +7,7 @@ on:
     paths:
       - 'profile/**'
       - 'scripts/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
