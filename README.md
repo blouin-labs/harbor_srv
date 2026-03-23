@@ -1,6 +1,8 @@
 # harbor_srv
 
-[![CI](https://github.com/JCBlouin/harbor_srv/actions/workflows/ci.yml/badge.svg?branch=staging)](https://github.com/JCBlouin/harbor_srv/actions/workflows/ci.yml)
+[![Check](https://github.com/JCBlouin/harbor_srv/actions/workflows/check.yml/badge.svg?branch=staging)](https://github.com/JCBlouin/harbor_srv/actions/workflows/check.yml)
+[![Build](https://github.com/JCBlouin/harbor_srv/actions/workflows/build.yml/badge.svg?branch=staging)](https://github.com/JCBlouin/harbor_srv/actions/workflows/build.yml)
+[![staging ahead](https://img.shields.io/github/commits-difference/JCBlouin/harbor_srv?base=main&head=staging&label=staging%20ahead)](https://github.com/JCBlouin/harbor_srv/compare/main...staging)
 
 A bare-minimum, stateless Arch Linux server for hosting Docker containers on a Lenovo ThinkPad connected to a Synology NAS.
 
@@ -79,8 +81,11 @@ scripts/
   deploy.sh               Each release: writes image to inactive slot, reboots
 
 .github/workflows/
-  ci.yml                  Runs on push/PR to staging: shellcheck + build image + upload artifact
-  deploy.yml              Runs on push to main (or manually): deploys last successful staging artifact
+  check.yml               Runs on PR to staging: shellcheck only. Fast gate — no build.
+  build.yml               Runs on push to staging: build image + upload artifact (named with commit SHA).
+  select-runner.yml       Reusable runner selection: wsl-docker-runner → harbor-srv-docker → ubuntu-latest.
+  promote.yml             Manual: verify build green on staging, fast-forward main. Type "promote" to confirm.
+  promote-deploy.yml      Manual: promote + deploy artifact to server. Type "ok reboot" to confirm.
 ```
 
 ## Getting started
@@ -100,14 +105,21 @@ bash install.sh /dev/nvme0n1 harbor_srv-root.img.zst
 
 ### Deploying an update
 
-Deployments are triggered by promoting `staging` to `main`. `deploy.yml` then downloads the last successful CI artifact from `staging` and runs `harbor-deploy` on the server. The server will reboot.
+There are two promotion workflows, both triggered manually from the GitHub Actions UI:
 
-To promote:
+**Promote and Deploy** (most common) — promotes `staging` to `main` and immediately deploys to the server:
 
-1. Go to **Actions → Promote → Run workflow** in the GitHub UI.
+1. Go to **Actions → Promote and Deploy → Run workflow**.
+2. Type `ok reboot` in the confirmation box and click **Run workflow**.
+
+The server will reboot. No image rebuild — the artifact already uploaded by `build.yml` on `staging` is downloaded and flashed directly.
+
+**Promote Only** — fast-forwards `main` to `staging` without deploying:
+
+1. Go to **Actions → Promote Only → Run workflow**.
 2. Type `promote` in the confirmation box and click **Run workflow**.
 
-The workflow verifies CI is green on `staging` before touching `main`. It will refuse to proceed if the latest build is not successful.
+Both workflows verify that `build.yml` is green on `staging` before touching `main`.
 
 ### SSH access
 
@@ -126,18 +138,13 @@ See [`profile/README.md`](profile/README.md) and [`scripts/README.md`](scripts/R
 ### Branch workflow
 
 ```mermaid
-flowchart LR
-    F["feat/* branch"]
-    CI["CI\nshellcheck + build"]
-    STG["staging"]
-    MAIN["main\n(production)"]
-    SRV["server\n(harbor-srv)"]
-
-    F -->|"open PR"| CI
-    CI -->|fail| F
-    CI -->|"pass → merge"| STG
-    STG -->|"git push origin staging:main"| MAIN
-    MAIN -->|"deploy.yml\ndownload artifact"| SRV
+flowchart TD
+    F[feature branch] -->|open PR| CHK[check.yml\nshellcheck]
+    CHK -->|fail| F
+    CHK -->|pass → merge| STG[staging]
+    STG -->|push| BLD[build.yml\nbuild + upload artifact]
+    BLD -->|Promote and Deploy| MAIN[main]
+    MAIN -->|promote-deploy.yml\ndownload artifact| SRV[harbor-srv]
 ```
 
 **Day-to-day:**
@@ -147,15 +154,17 @@ flowchart LR
    git checkout staging && git pull
    git checkout -b feat/your-change
    ```
-2. **Open a PR targeting `staging`** — CI runs `check` + `build` and uploads an artifact.
-3. **Rebase and merge** into `staging` (no merge commits).
-4. **Promote when ready** via **Actions → Promote → Run workflow**. Type `promote` to confirm. `deploy.yml` picks up the artifact already built by CI and flashes the server. No rebuild.
+2. **Open a PR targeting `staging`** — `check.yml` runs shellcheck (no build).
+3. **Rebase and merge** into `staging` (no merge commits) — `build.yml` builds the image and uploads the artifact.
+4. **Promote when ready** — two options:
+   - **Promote and Deploy** — promotes and immediately flashes the server: **Actions → Promote and Deploy → Run workflow**, type `ok reboot`.
+   - **Promote Only** — `staging` → `main`, no deploy: **Actions → Promote Only → Run workflow**, type `promote`.
 
 > `staging` and `main` are always at the same commit after a promotion — divergence is structurally impossible with fast-forward-only merges.
 
 ## Updating the stack
 
-All package versions and the build environment are pinned to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/ci.yml`** only — two adjacent values:
+All package versions and the build environment are pinned to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/build.yml`** and **`.github/workflows/check.yml`** — two adjacent values in each:
 
 1. Update `ARCH_SNAPSHOT` to the new date (`YYYY/MM/DD`). Check [archive.archlinux.org/repos](https://archive.archlinux.org/repos/) to confirm the date is available.
 2. Update the `container.image` digest to match. Fetch it with:

@@ -1,0 +1,61 @@
+---
+name: Build
+
+# Snapshot date and Docker image digest are pinned together.
+# To upgrade the full stack, update both values here and open a PR.
+# See README.md "Updating the stack" for the full process.
+env:
+  ARCH_SNAPSHOT: "2026/03/22"  # archive.archlinux.org date — update to upgrade
+
+on:
+  push:
+    branches: [staging]
+    paths:
+      - 'profile/**'
+      - 'scripts/**'
+
+jobs:
+  select-runner:
+    uses: ./.github/workflows/select-runner.yml
+    secrets: inherit
+
+  build:
+    runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
+    needs: select-runner
+    container:
+      # archlinux/archlinux:latest — pinned digest matches ARCH_SNAPSHOT above
+      image: archlinux/archlinux@sha256:0e2b66488c60a96c65041cde5e754957a880b760dd4f00865ed09c131a51cd44
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Compute short SHA
+        id: sha
+        run: echo "short=$(echo '${{ github.sha }}' | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: |
+          pacman -Sy --needed --noconfirm archlinux-keyring
+          pacman -Syu --needed --noconfirm arch-install-scripts e2fsprogs dosfstools zstd
+
+      - name: Build root image
+        run: ./scripts/build-image.sh profile/ output/
+
+      - name: Upload root image artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: harbor_srv-root-${{ steps.sha.outputs.short }}
+          path: output/
+          retention-days: 30
+
+      - name: Job summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          | Field | Value |
+          |---|---|
+          | Commit | \`${{ github.sha }}\` |
+          | Message | ${{ github.event.head_commit.message }} |
+          | Branch | \`${{ github.ref_name }}\` |
+          | Arch snapshot | \`${{ env.ARCH_SNAPSHOT }}\` |
+          | Built at | \`$(date -u)\` |
+          EOF

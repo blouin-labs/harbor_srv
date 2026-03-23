@@ -1,0 +1,36 @@
+---
+name: Select Runner
+
+on:
+  workflow_call:
+    outputs:
+      runner:
+        description: "JSON array of runner labels to pass to runs-on"
+        value: ${{ jobs.select.outputs.runner }}
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.pick.outputs.runner }}
+    steps:
+      - name: Pick runner
+        id: pick
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          wsl_status=$(gh api repos/${{ github.repository }}/actions/runners \
+            --jq '.runners[] | select(.name=="wsl-docker-runner") | .status' 2>/dev/null || echo "")
+          docker_status=$(gh api repos/${{ github.repository }}/actions/runners \
+            --jq '.runners[] | select(.name=="harbor-srv-docker") | .status' 2>/dev/null || echo "")
+
+          if [ "$wsl_status" = "online" ]; then
+            echo 'runner=["self-hosted","wsl-docker-runner"]' >> "$GITHUB_OUTPUT"
+            echo "::notice::wsl-docker-runner online — selected"
+          elif [ "$docker_status" = "online" ]; then
+            echo 'runner=["self-hosted","harbor-srv-docker"]' >> "$GITHUB_OUTPUT"
+            echo "::notice::wsl-docker-runner offline — harbor-srv-docker online — selected"
+          else
+            echo 'runner=["ubuntu-latest"]' >> "$GITHUB_OUTPUT"
+            echo "::notice::wsl-docker-runner offline, harbor-srv-docker offline — falling back to ubuntu-latest"
+          fi
