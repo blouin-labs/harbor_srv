@@ -5,6 +5,7 @@
 # Used by scripts/build-image.sh for file_permissions.
 
 
+
 file_permissions=(
   ["/"]="0:0:755"
   ["/etc/passwd"]="0:0:644"
