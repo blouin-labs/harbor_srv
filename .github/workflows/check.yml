@@ -69,3 +69,14 @@ jobs:
 
       - name: Actionlint
         run: actionlint
+
+  all-checks:
+    needs: [shellcheck, actionlint]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: All checks passed
+        run: |
+          if [ "${{ needs.shellcheck.result }}" = "failure" ] || [ "${{ needs.actionlint.result }}" = "failure" ]; then
+            exit 1
+          fi
