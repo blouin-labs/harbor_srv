@@ -14,10 +14,18 @@ jobs:
     outputs:
       runner: ${{ steps.pick.outputs.runner }}
     steps:
+      - name: Generate token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.RUNNER_POLLER_APP_ID }}
+          private-key: ${{ secrets.RUNNER_POLLER_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - name: Pick runner
         id: pick
         env:
-          GH_TOKEN: ${{ secrets.ORG_RUNNER_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           wsl_status=$(gh api orgs/${{ github.repository_owner }}/actions/runners \
             --jq '.runners[] | select(.name=="wsl-docker-runner") | .status' 2>/dev/null || echo "")
