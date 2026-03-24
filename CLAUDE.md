@@ -55,8 +55,8 @@ Follow [Conventional Commits](https://www.conventionalcommits.org): `feat:`, `fi
 
 ## Never do
 
+- **NEVER merge or approve any PR** — into `staging`, `main`, or any branch — without the user's explicit instruction to do so. This applies even when CI is green and the branch is ready.
 - Push directly to `staging` or `main`. All work goes through a PR for the user to review. Promotion is via the Promotion workflow, not direct push.
-- Merge or approve PRs unless explicitly asked.
 - Amend commits that have already been pushed.
 - Use `--force` push on any branch.
 - Grant the runner broad sudo or root access.
