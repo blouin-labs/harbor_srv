@@ -57,6 +57,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org): `feat:`, `fi
 
 - `gh repo view --json` field is `nameWithOwner`, not `fullName`.
 - `gh issue close` has no `--comment` flag. To close with a comment: `gh issue comment N --body "..."` then `gh issue close N` as separate commands.
+- `gh pr edit` internally queries `projectCards` (Projects Classic) and exits with code 1 on this repo. Use the REST API instead: `gh api repos/{owner}/{repo}/pulls/{N} -X PATCH -f title="..." -f body="..."`
 
 ## GitHub Projects
 
