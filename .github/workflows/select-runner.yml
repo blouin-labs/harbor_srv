@@ -27,6 +27,14 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
+          # Fork PRs never run on self-hosted runners — fall back to ubuntu-latest
+          if [ "${{ github.event_name }}" = "pull_request" ] && \
+             [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo 'runner=["ubuntu-latest"]' >> "$GITHUB_OUTPUT"
+            echo "::notice::Fork PR — self-hosted runners not available for forks, using ubuntu-latest"
+            exit 0
+          fi
+
           wsl_status=$(gh api orgs/${{ github.repository_owner }}/actions/runners \
             --jq '.runners[] | select(.name=="wsl-docker-runner") | .status' 2>/dev/null || echo "")
           docker_status=$(gh api orgs/${{ github.repository_owner }}/actions/runners \
