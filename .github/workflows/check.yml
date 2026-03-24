@@ -1,5 +1,5 @@
 ---
-name: Check
+name: Checks
 
 on:
   pull_request:
@@ -7,15 +7,34 @@ on:
     paths:
       - 'profile/**'
       - 'scripts/**'
+      - '.github/workflows/**'
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      scripts: ${{ steps.filter.outputs.scripts }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            scripts:
+              - 'profile/**'
+              - 'scripts/**'
+            workflows:
+              - '.github/workflows/**'
+
   select-runner:
     uses: ./.github/workflows/select-runner.yml
     secrets: inherit
 
-  check:
+  shellcheck:
+    needs: [changes, select-runner]
+    if: ${{ needs.changes.outputs.scripts == 'true' }}
     runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
-    needs: select-runner
     container:
       # archlinux/archlinux:latest — pinned digest matches ARCH_SNAPSHOT in build.yml
       image: archlinux/archlinux@sha256:0e2b66488c60a96c65041cde5e754957a880b760dd4f00865ed09c131a51cd44
@@ -35,3 +54,18 @@ jobs:
           shellcheck scripts/deploy.sh
           shellcheck profile/airootfs/usr/local/bin/harbor-runner-bootstrap
           shellcheck profile/airootfs/usr/local/sbin/harbor-deploy
+
+  actionlint:
+    needs: changes
+    if: ${{ needs.changes.outputs.workflows == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install actionlint
+        run: |
+          curl -sL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
+          sudo mv actionlint /usr/local/bin/
+
+      - name: Actionlint
+        run: actionlint
