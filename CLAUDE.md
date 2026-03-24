@@ -53,6 +53,11 @@ Follow [Conventional Commits](https://www.conventionalcommits.org): `feat:`, `fi
 5. **Before adding `Closes #N` to a PR**, re-read the issue description and all comments to confirm the PR fully addresses the *why*. If the issue spans multiple PRs, use `Refs #N` instead.
 6. **Close issues with a summary** — re-read the full thread, confirm nothing was missed, close with a brief comment.
 
+## gh CLI gotchas
+
+- `gh repo view --json` field is `nameWithOwner`, not `fullName`.
+- `gh issue close` has no `--comment` flag. To close with a comment: `gh issue comment N --body "..."` then `gh issue close N` as separate commands.
+
 ## GitHub Projects
 
 Projects Classic was fully sunset on August 23, 2024. **Never use it.** Always use the new GitHub Projects:
