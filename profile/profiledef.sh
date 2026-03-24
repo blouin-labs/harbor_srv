@@ -20,6 +20,5 @@ file_permissions=(
   ["/usr/local/sbin/harbor-compose-ctl"]="0:0:750"
   ["/etc/sudoers.d/runner"]="0:0:440"
   ["/var/lib/runner"]="968:968:700"
-
 )
 
