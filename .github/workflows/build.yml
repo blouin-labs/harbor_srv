@@ -33,7 +33,7 @@ jobs:
         id: sha
         run: echo "short=$(echo '${{ github.sha }}' | cut -c1-7)" >> "$GITHUB_OUTPUT"
 
-      - name: Install dependencies
+      - name: Install build dependencies
         run: |
           pacman -Sy --needed --noconfirm archlinux-keyring
           pacman -Syu --needed --noconfirm arch-install-scripts e2fsprogs dosfstools zstd
@@ -48,7 +48,7 @@ jobs:
           path: output/
           retention-days: 30
 
-      - name: Job summary
+      - name: Write build summary
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |

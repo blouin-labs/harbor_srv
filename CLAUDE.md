@@ -8,7 +8,7 @@ Working conventions for this repository. Keep this file up to date as the projec
 - **`main`** — production. Promoted from `staging` only, never committed to directly.
 - **Feature branches** — `feat/`, `fix/`, `docs/`, `chore/` prefixes. Always branch from `staging`.
 
-Promotion to production is done via the **Promote and Deploy** or **Promote Only** workflows in GitHub Actions. Never push directly to `main`.
+Promotion to production is done via the **Promotion** workflow in GitHub Actions. Never push directly to `main`.
 
 Never create merge commits. Always rebase feature branches onto `staging` before opening a PR.
 
@@ -23,8 +23,10 @@ Never branch from a stale or in-progress branch — the local tree may be behind
 - `check.yml` — triggers on PR to `staging`. Runs shellcheck only. Fast gate — no build.
 - `build.yml` — triggers on push to `staging`. Builds the root image, uploads artifact named `harbor_srv-root-{sha}`. Artifacts retained 30 days.
 - `select-runner.yml` — reusable `workflow_call`. Picks the best available runner: `wsl-docker-runner` → `harbor-srv-docker` → `ubuntu-latest`. `harbor-srv` (bare-metal) is excluded — reserved for deploy only.
-- `promote.yml` — `workflow_dispatch` only. Verifies `build.yml` is green on `staging`, then fast-forwards `main`. Requires typing `"promote"` to confirm.
-- `promote-deploy.yml` — `workflow_dispatch` only. Promotes then deploys: downloads the `harbor_srv-root-{sha}` artifact and flashes the server via `harbor-srv`. Requires typing `"ok reboot"` to confirm. Server will reboot.
+- `promotion.yml` — `workflow_dispatch` only. Action dropdown with three options:
+  - `promote-and-deploy` (default) — verifies CI on `staging`, fast-forwards `main`, then flashes the server. Requires `"ok reboot"` to confirm. Server will reboot.
+  - `promote` — verifies CI on `staging` and fast-forwards `main`. No confirmation required.
+  - `deploy` — flashes the server without promoting. Requires `"ok reboot"` to confirm. Optional `run_id` input; defaults to latest successful staging build.
 
 No deploy ever rebuilds the image — it always uses the artifact already produced by CI on `staging`.
 
@@ -53,7 +55,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org): `feat:`, `fi
 
 ## Never do
 
-- Push directly to `staging` or `main`. All work goes through a PR for the user to review. Promotion is via the Promote workflow, not direct push.
+- Push directly to `staging` or `main`. All work goes through a PR for the user to review. Promotion is via the Promotion workflow, not direct push.
 - Merge or approve PRs unless explicitly asked.
 - Amend commits that have already been pushed.
 - Use `--force` push on any branch.

@@ -1,4 +1,4 @@
-name: Compose Manage
+name: Container Management
 
 on:
   workflow_dispatch:

@@ -6,10 +6,10 @@ on:
     outputs:
       runner:
         description: "JSON array of runner labels to pass to runs-on"
-        value: ${{ jobs.select.outputs.runner }}
+        value: ${{ jobs.select-runner.outputs.runner }}
 
 jobs:
-  select:
+  select-runner:
     runs-on: ubuntu-latest
     outputs:
       runner: ${{ steps.pick.outputs.runner }}

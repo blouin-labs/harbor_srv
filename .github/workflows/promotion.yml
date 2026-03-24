@@ -1,31 +1,46 @@
 ---
-name: Promote and Deploy
+name: Promotion
 
 on:
   workflow_dispatch:
     inputs:
-      confirm:
-        description: 'Type "ok reboot" to confirm. The server will reboot.'
+      action:
+        description: Action to perform
         required: true
+        type: choice
+        default: promote-and-deploy
+        options:
+          - promote-and-deploy
+          - promote
+          - deploy
+      confirm:
+        description: 'For promote-and-deploy or deploy: type "ok reboot" to confirm. Server will reboot.'
+        required: false
+      run_id:
+        description: 'Deploy only: build run ID to deploy (leave blank for latest successful staging build)'
+        required: false
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   promote:
     runs-on: ubuntu-latest
+    if: ${{ inputs.action == 'promote' || inputs.action == 'promote-and-deploy' }}
     outputs:
-      run_id: ${{ steps.find-run.outputs.run_id }}
+      run_id: ${{ steps.verify.outputs.run_id }}
     steps:
       - name: Confirm
+        if: ${{ inputs.action == 'promote-and-deploy' }}
         run: |
           if [ "${{ inputs.confirm }}" != "ok reboot" ]; then
             echo "ERROR: type exactly 'ok reboot' to confirm." >&2
             exit 1
           fi
 
-      - name: Verify CI is green on staging
-        id: find-run
+      - name: Verify staging build
+        id: verify
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -50,9 +65,37 @@ jobs:
             --field force=false
 
   deploy:
-    needs: promote
+    needs: [promote]
     runs-on: [self-hosted, harbor-srv]
+    if: ${{ always() && (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
     steps:
+      - name: Confirm
+        run: |
+          if [ "${{ inputs.confirm }}" != "ok reboot" ]; then
+            echo "ERROR: type exactly 'ok reboot' to confirm." >&2
+            exit 1
+          fi
+
+      - name: Resolve artifact
+        id: artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ inputs.run_id }}"
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID="${{ needs.promote.outputs.run_id }}"
+          fi
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(gh api \
+              "repos/${{ github.repository }}/actions/workflows/build.yml/runs?branch=staging&status=success&per_page=1" \
+              --jq '.workflow_runs[0].id')
+          fi
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "ERROR: could not resolve a build artifact to deploy" >&2
+            exit 1
+          fi
+          echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+
       - name: Download root image artifact
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -60,7 +103,7 @@ jobs:
           ARTIFACT_URL=$(curl -sf \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ needs.promote.outputs.run_id }}/artifacts" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ steps.artifact.outputs.run_id }}/artifacts" \
             | jq -r '.artifacts[] | select(.name | startswith("harbor_srv-root")) | .archive_download_url')
           mkdir -p /tmp/harbor-deploy/
           curl -sL \
@@ -70,7 +113,7 @@ jobs:
           bsdtar -xf /tmp/harbor-deploy/artifact.zip -C /tmp/harbor-deploy/
           rm /tmp/harbor-deploy/artifact.zip
 
-      - name: Deploy
+      - name: Flash server
         run: |
           mv /tmp/harbor-deploy/harbor_srv-root.img.zst /tmp/harbor_srv-root.img.zst
           sudo /usr/local/sbin/harbor-deploy
