@@ -53,6 +53,12 @@ Follow [Conventional Commits](https://www.conventionalcommits.org): `feat:`, `fi
 5. **Before adding `Closes #N` to a PR**, re-read the issue description and all comments to confirm the PR fully addresses the *why*. If the issue spans multiple PRs, use `Refs #N` instead.
 6. **Close issues with a summary** — re-read the full thread, confirm nothing was missed, close with a brief comment.
 
+## GitHub Projects
+
+Projects Classic was fully sunset on August 23, 2024. **Never use it.** Always use the new GitHub Projects:
+- CLI: `gh project` (requires gh v2.82.1+)
+- API: GraphQL only — the classic REST projects API was removed April 1, 2025
+
 ## Never do
 
 - **NEVER merge or approve any PR** — into `staging`, `main`, or any branch — without the user's explicit instruction to do so. This applies even when CI is green and the branch is ready.
