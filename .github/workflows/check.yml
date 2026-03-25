@@ -83,6 +83,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Vale crashes (exit 2) on dangling symlinks — vale-cli/vale#919.
+      # The repo contains absolute symlinks in systemd .wants/ directories
+      # that resolve on the deployed system but not on the runner.
       - name: Remove dangling symlinks
         run: find . -xtype l -delete
 
