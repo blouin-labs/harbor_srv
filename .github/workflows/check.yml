@@ -8,6 +8,8 @@ on:
       - 'profile/**'
       - 'scripts/**'
       - '.github/workflows/**'
+      - '**.md'
+      - '.vale.ini'
 
 jobs:
   changes:
@@ -15,6 +17,7 @@ jobs:
     outputs:
       scripts: ${{ steps.filter.outputs.scripts }}
       workflows: ${{ steps.filter.outputs.workflows }}
+      docs: ${{ steps.filter.outputs.docs }}
     steps:
       - uses: actions/checkout@v5
       - uses: dorny/paths-filter@v3
@@ -26,6 +29,9 @@ jobs:
               - 'scripts/**'
             workflows:
               - '.github/workflows/**'
+            docs:
+              - '**.md'
+              - '.vale.ini'
 
   select-runner:
     uses: ./.github/workflows/select-runner.yml
@@ -70,13 +76,34 @@ jobs:
       - name: Actionlint
         run: actionlint
 
+  vale:
+    needs: changes
+    if: ${{ needs.changes.outputs.docs == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Vale
+        run: |
+          curl -sL https://github.com/errata-ai/vale/releases/latest/download/vale_Linux_64-bit.tar.gz \
+            | tar -xz vale
+          sudo mv vale /usr/local/bin/
+
+      - name: Sync styles
+        run: vale sync
+
+      - name: Vale
+        run: vale --glob='**.md' .
+
   all-checks:
-    needs: [shellcheck, actionlint]
+    needs: [shellcheck, actionlint, vale]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: All checks passed
         run: |
-          if [ "${{ needs.shellcheck.result }}" = "failure" ] || [ "${{ needs.actionlint.result }}" = "failure" ]; then
+          if [ "${{ needs.shellcheck.result }}" = "failure" ] \
+            || [ "${{ needs.actionlint.result }}" = "failure" ] \
+            || [ "${{ needs.vale.result }}" = "failure" ]; then
             exit 1
           fi
