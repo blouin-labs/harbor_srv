@@ -5,98 +5,77 @@
 CI/CD pipeline for harbor_srv. Uses a two-branch model:
 
 - **Feature branches** (`feat/`, `fix/`, `docs/`, `chore/`) — local development, PR'd into `staging`
-- **`staging`** — integration branch; PRs and pushes trigger CI (shellcheck + image build)
-- **`main`** — production; fast-forward promoted from `staging` when ready to deploy
+- **`staging`** — integration branch; PRs trigger checks, pushes trigger the image build
+- **`main`** — production; fast-forward promoted from `staging` via the Promotion workflow
 
-README-only changes do not trigger a build.
+## Workflows
 
-## Branch workflow
+### [check.yml](check.yml)
 
-```
-feat/my-thing  →  PR to staging  →  CI runs  →  merge (rebase)
-                                                      ↓
-                             Actions → Promote → Run workflow   ← promote when ready
-                                                      ↓
-                                               deploy.yml fires
-```
+Runs on **PR to `staging`**. Path-filtered — only fires when `profile/**`, `scripts/**`, `.github/workflows/**`, `**.md`, or `.vale.ini` change.
 
-Feature branch rule: always `git rebase origin/staging` before opening a PR. Never merge.
+Three jobs run in parallel (each skipped if its paths didn't change):
 
-Promote via **Actions → Promote → Run workflow**. Type `promote` to confirm. The workflow verifies CI is green on `staging` before touching `main`.
+| Job | Paths | What it does |
+|-----|-------|--------------|
+| `shellcheck` | `profile/**`, `scripts/**` | Runs [shellcheck](https://www.shellcheck.net/) on all shell scripts inside an `archlinux/archlinux` container |
+| `actionlint` | `.github/workflows/**` | Runs [actionlint](https://github.com/rhysd/actionlint) to lint workflow files |
+| `vale` | `**.md`, `.vale.ini` | Runs [Vale](https://vale.sh/) prose linter on all Markdown files |
 
-## Table of Contents
-
-- [ci.yml](#ciyml)
-  - [Triggers](#triggers)
-  - [check job](#check-job)
-  - [build job](#build-job)
-  - [Artifact](#artifact)
-- [promote.yml](#promoteyml)
-- [deploy.yml](#deployyml)
+An `all-checks` aggregator job collects results — this is the required status check on PRs.
 
 ---
 
-## [ci.yml](ci.yml)
+### [build.yml](build.yml)
 
-Two-job pipeline: `check` must pass before `build` runs.
+Runs on **push to `staging`** when `profile/**` or `scripts/**` change.
 
-### Triggers
+Builds the root filesystem image inside a privileged `archlinux/archlinux` container (privileged mode required for loop devices and `arch-chroot`). Uploads the result as artifact `harbor_srv-root-{sha}` with 30-day retention.
 
-Runs on:
-- Push to the `staging` branch
-- Pull requests targeting `staging`
+Uses [select-runner.yml](#select-runneryml) to pick the best available runner.
 
-Only fires when files under `profile/**` or `scripts/**` change.
-
-### check job
-
-Runs [shellcheck](https://www.shellcheck.net/) against all scripts and the profile definition:
-
-- `profile/profiledef.sh`
-- `scripts/build-image.sh`
-- `scripts/install.sh`
-- `scripts/deploy.sh`
-
-Runs inside an `archlinux/archlinux:latest` container so the shell environment matches the build environment.
-
-### build job
-
-Runs `./scripts/build-image.sh profile/ output/` inside a **privileged** `archlinux/archlinux:latest` container. Privileged mode is required because `build-image.sh` uses loop devices (`losetup`) and `arch-chroot`, which need elevated kernel access unavailable in standard unprivileged containers.
-
-Depends on `check` — if shellcheck fails, the image is not built.
-
-### Artifact
-
-Uploads `output/` as artifact `harbor_srv-root` with 30-day retention. Contents:
+**Output artifact contents:**
 
 | File | Description |
 |------|-------------|
 | `harbor_srv-root.img.zst` | Compressed root filesystem image |
 | `harbor_srv-root.img.zst.sha256` | SHA256 checksum |
 
-Download with:
+---
 
-```bash
-gh run download <run-id> -n harbor_srv-root -D /tmp/deploy
-```
+### [select-runner.yml](select-runner.yml)
+
+Reusable workflow (`workflow_call`). Checks runner availability via the GitHub API and outputs a JSON runner label for the calling job.
+
+Priority order: `wsl-docker-runner` → `harbor-srv-docker` → `ubuntu-latest`
+
+The bare-metal `harbor-srv` runner is excluded — it is reserved for deploy only.
 
 ---
 
-## [promote.yml](promote.yml)
+### [promotion.yml](promotion.yml)
 
-`workflow_dispatch` only — triggered manually via the GitHub Actions UI.
+`workflow_dispatch` only — triggered manually via **Actions → Promotion → Run workflow**.
 
-Requires typing `"promote"` in the confirmation input before any action is taken. Fails immediately if the input doesn't match.
+Select an action from the dropdown:
 
-Steps:
-1. **Confirm** — validates the confirmation input.
-2. **Verify CI** — checks the latest `build` job on `staging` is `success`. Aborts if not.
-3. **Fast-forward main** — updates `main` to `staging`'s HEAD via the GitHub API (`force: false`). Will fail safely if the branches have somehow diverged.
+| Action | What it does | Confirmation required |
+|--------|-------------|----------------------|
+| `promote-and-deploy` (default) | Verifies CI on `staging`, fast-forwards `main`, then flashes the server | `ok reboot` |
+| `promote` | Verifies CI on `staging` and fast-forwards `main`. No deploy. | None |
+| `deploy` | Flashes the server without promoting. Defaults to latest successful staging build; accepts optional `run_id`. | `ok reboot` |
 
-Triggers `deploy.yml` as a side effect of the push to `main`.
+All actions verify that `build.yml` is green on `staging` before touching `main`. No action ever rebuilds the image — it always uses the artifact already produced by `build.yml`.
 
 ---
 
-## [deploy.yml](deploy.yml)
+### [compose-manage.yml](compose-manage.yml)
 
-Triggers on push to `main` (and `workflow_dispatch`). Fetches the artifact from the last successful CI run on `staging` and flashes it to the server via the self-hosted runner.
+`workflow_dispatch` only. Runs container management commands on `harbor-srv` via `sudo harbor-compose-ctl`.
+
+| Action | What it does |
+|--------|-------------|
+| `rescan` | Rescans the NFS share for new or removed stacks |
+| `update` | Pulls latest images and recreates changed containers |
+| `stop` | Stops all managed stacks |
+| `start` | Starts all managed stacks |

@@ -1,6 +1,6 @@
 # harbor_srv
 
-[![Check](https://github.com/JCBlouin/harbor_srv/actions/workflows/check.yml/badge.svg?branch=staging)](https://github.com/JCBlouin/harbor_srv/actions/workflows/check.yml)
+[![Check](https://github.com/JCBlouin/harbor_srv/actions/workflows/check.yml/badge.svg)](https://github.com/JCBlouin/harbor_srv/actions/workflows/check.yml)
 [![Build](https://github.com/JCBlouin/harbor_srv/actions/workflows/build.yml/badge.svg?branch=staging)](https://github.com/JCBlouin/harbor_srv/actions/workflows/build.yml)
 [![staging ahead](https://img.shields.io/github/commits-difference/JCBlouin/harbor_srv?base=main&head=staging&label=staging%20ahead)](https://github.com/JCBlouin/harbor_srv/compare/main...staging)
 
@@ -81,11 +81,11 @@ scripts/
   deploy.sh               Each release: writes image to inactive slot, reboots
 
 .github/workflows/
-  check.yml               Runs on PR to staging: shellcheck only. Fast gate — no build.
+  check.yml               Runs on PR to staging: shellcheck, actionlint, vale. Fast gate — no build.
   build.yml               Runs on push to staging: build image + upload artifact (named with commit SHA).
   select-runner.yml       Reusable runner selection: wsl-docker-runner → harbor-srv-docker → ubuntu-latest.
-  promote.yml             Manual: verify build green on staging, fast-forward main. Type "promote" to confirm.
-  promote-deploy.yml      Manual: promote + deploy artifact to server. Type "ok reboot" to confirm.
+  promotion.yml           Manual dispatch with action dropdown: promote-and-deploy / promote / deploy.
+  compose-manage.yml      Manual dispatch: rescan, update, stop, start containers on harbor-srv.
 ```
 
 ## Getting started
@@ -105,21 +105,15 @@ bash install.sh /dev/nvme0n1 harbor_srv-root.img.zst
 
 ### Deploying an update
 
-There are two promotion workflows, both triggered manually from the GitHub Actions UI:
+Triggered manually from **Actions → Promotion → Run workflow**. Select an action from the dropdown:
 
-**Promote and Deploy** (most common) — promotes `staging` to `main` and immediately deploys to the server:
+**promote-and-deploy** (default, most common) — promotes `staging` to `main` and immediately deploys to the server. Type `ok reboot` to confirm. The server will reboot. No image rebuild — the artifact already uploaded by `build.yml` on `staging` is downloaded and flashed directly.
 
-1. Go to **Actions → Promote and Deploy → Run workflow**.
-2. Type `ok reboot` in the confirmation box and click **Run workflow**.
+**promote** — fast-forwards `main` to `staging` without deploying. No confirmation required.
 
-The server will reboot. No image rebuild — the artifact already uploaded by `build.yml` on `staging` is downloaded and flashed directly.
+**deploy** — flashes the server without promoting. Type `ok reboot` to confirm.
 
-**Promote Only** — fast-forwards `main` to `staging` without deploying:
-
-1. Go to **Actions → Promote Only → Run workflow**.
-2. Type `promote` in the confirmation box and click **Run workflow**.
-
-Both workflows verify that `build.yml` is green on `staging` before touching `main`.
+All actions verify that `build.yml` is green on `staging` before touching `main`.
 
 ### SSH access
 
@@ -139,12 +133,12 @@ See [`profile/README.md`](profile/README.md) and [`scripts/README.md`](scripts/R
 
 ```mermaid
 flowchart TD
-    F[feature branch] -->|open PR| CHK[check.yml\nshellcheck]
+    F[feature branch] -->|open PR| CHK[check.yml\nshellcheck / actionlint / vale]
     CHK -->|fail| F
     CHK -->|pass → merge| STG[staging]
     STG -->|push| BLD[build.yml\nbuild + upload artifact]
-    BLD -->|Promote and Deploy| MAIN[main]
-    MAIN -->|promote-deploy.yml\ndownload artifact| SRV[harbor-srv]
+    BLD -->|promote-and-deploy| MAIN[main]
+    MAIN -->|promotion.yml\ndownload artifact| SRV[harbor-srv]
 ```
 
 **Day-to-day:**
@@ -154,11 +148,11 @@ flowchart TD
    git checkout staging && git pull
    git checkout -b feat/your-change
    ```
-2. **Open a PR targeting `staging`** — `check.yml` runs shellcheck (no build).
+2. **Open a PR targeting `staging`** — `check.yml` runs shellcheck, actionlint, and vale (no build).
 3. **Rebase and merge** into `staging` (no merge commits) — `build.yml` builds the image and uploads the artifact.
-4. **Promote when ready** — two options:
-   - **Promote and Deploy** — promotes and immediately flashes the server: **Actions → Promote and Deploy → Run workflow**, type `ok reboot`.
-   - **Promote Only** — `staging` → `main`, no deploy: **Actions → Promote Only → Run workflow**, type `promote`.
+4. **Promote when ready** — go to **Actions → Promotion → Run workflow** and select an action:
+   - **promote-and-deploy** — promotes and immediately flashes the server, type `ok reboot`.
+   - **promote** — fast-forwards `staging` → `main`, no deploy.
 
 > `staging` and `main` are always at the same commit after a promotion — divergence is structurally impossible with fast-forward-only merges.
 
