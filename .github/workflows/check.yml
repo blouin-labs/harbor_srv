@@ -83,17 +83,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install Vale
-        run: |
-          curl -sL https://github.com/errata-ai/vale/releases/latest/download/vale_Linux_64-bit.tar.gz \
-            | tar -xz vale
-          sudo mv vale /usr/local/bin/
-
-      - name: Sync styles
-        run: vale sync
-
-      - name: Vale
-        run: vale --glob='**.md' .
+      - uses: vale-cli/vale-action@v2.1.1
+        with:
+          files: all
+          reporter: github-check
+          fail_on_error: true
 
   all-checks:
     needs: [shellcheck, actionlint, vale]
