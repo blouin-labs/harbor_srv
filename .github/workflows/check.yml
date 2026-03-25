@@ -85,7 +85,7 @@ jobs:
 
       - uses: vale-cli/vale-action@v2.1.1
         with:
-          files: all
+          files: "."
           reporter: github-check
           fail_on_error: true
 
