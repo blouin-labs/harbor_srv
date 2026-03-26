@@ -10,7 +10,7 @@ Configuration overlay copied verbatim into the root filesystem during `build-ima
 
 - [Secure Shell](#secure-shell)
 - [Networking](#networking)
-- [Synology mount](#synology-mount)
+- [Network storage mount](#network-storage-mount)
 - [initramfs](#initramfs)
 - [Runner](#runner)
 - [Locale](#locale)
@@ -46,15 +46,15 @@ Overrides `systemd-networkd-wait-online` to pass `--any`, so `network-online.tar
 
 ---
 
-## Synology mount
+## Network storage mount
 
 ### [`etc/systemd/system/mnt-synology-harbor_srv.mount`](etc/systemd/system/mnt-synology-harbor_srv.mount)
 
-Mounts the Synology NAS share (`192.168.1.10:/volume1/harbor_srv`) at `/mnt/synology/harbor_srv` via NFSv4.1. Uses a soft mount with a 30-second timeout so a NAS outage doesn't hang the system. The `_netdev` flag tells systemd this mount requires the network and orders it correctly in the boot sequence. Enabled as a systemd unit so it starts automatically.
+Mounts the NAS share (`192.168.1.10:/volume1/harbor_srv`) at `/mnt/synology/harbor_srv` via NFSv4.1. Uses a soft mount with a 30-second timeout so a NAS outage doesn't hang the system. The `_netdev` flag tells systemd this mount requires the network and orders it correctly in the boot sequence. Enabled as a systemd unit so it starts automatically.
 
 ### [`etc/systemd/system/docker.service.d/nfs-dependency.conf`](etc/systemd/system/docker.service.d/nfs-dependency.conf)
 
-Drop-in for `docker.service` that adds a hard dependency on the Synology NFS mount. Prevents Docker from starting before the NFS share is available, which would cause any Compose stacks referencing NFS-backed volumes to fail on boot.
+Drop-in for `docker.service` that adds a hard dependency on the NAS mount. Prevents Docker from starting before the NFS share is available, which would cause any Compose stacks referencing NFS-backed volumes to fail on boot.
 
 ---
 
