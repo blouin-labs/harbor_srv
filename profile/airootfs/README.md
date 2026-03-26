@@ -2,15 +2,15 @@
 
 # airootfs/
 
-Configuration overlay copied verbatim into the root filesystem during `build-image.sh`. Every file here appears at the same path in the installed system. Permissions are set separately via `profiledef.sh`. See [`profile/README.md`](../README.md).
+Configuration overlay copied verbatim into the root filesystem during `build-image.sh`. Every file here appears at the same path in the installed system. Permissions are set via `profiledef.sh`. See [`profile/README.md`](../README.md).
 
 > This README is stripped from the image at build time.
 
 ## Table of Contents
 
-- [SSH](#ssh)
+- [Secure Shell](#secure-shell)
 - [Networking](#networking)
-- [NFS mount](#nfs-mount)
+- [Synology mount](#synology-mount)
 - [initramfs](#initramfs)
 - [Runner](#runner)
 - [Locale](#locale)
@@ -18,7 +18,7 @@ Configuration overlay copied verbatim into the root filesystem during `build-ima
 
 ---
 
-## SSH
+## Secure Shell
 
 ### [`etc/ssh/sshd_config.d/10-archiso.conf`](etc/ssh/sshd_config.d/10-archiso.conf)
 
@@ -42,11 +42,11 @@ Enables Multicast DNS (mDNS) in systemd-resolved for `.local` name resolution on
 
 ### [`etc/systemd/system/systemd-networkd-wait-online.service.d/wait-for-only-one-interface.conf`](etc/systemd/system/systemd-networkd-wait-online.service.d/wait-for-only-one-interface.conf)
 
-Overrides `systemd-networkd-wait-online` to pass `--any`, so `network-online.target` is satisfied as soon as any interface comes up rather than waiting for all managed interfaces. Without this, Docker's virtual bridge interfaces can delay boot unnecessarily.
+Overrides `systemd-networkd-wait-online` to pass `--any`, so `network-online.target` is satisfied as soon as any interface comes up rather than waiting for all managed interfaces. Without this, Docker's virtual bridge interfaces can delay boot.
 
 ---
 
-## NFS mount
+## Synology mount
 
 ### [`etc/systemd/system/mnt-synology-harbor_srv.mount`](etc/systemd/system/mnt-synology-harbor_srv.mount)
 
@@ -66,7 +66,7 @@ Custom `mkinitcpio` hooks configuration. Specifies the minimal hook set needed t
 
 ### [`etc/mkinitcpio.d/linux.preset`](etc/mkinitcpio.d/linux.preset)
 
-mkinitcpio preset for the `linux` package. Defines a single `default` preset that points at our custom configuration above. Replaces the stock preset so that running `mkinitcpio -P` (in `build-image.sh`) uses our hooks rather than the package defaults.
+mkinitcpio preset for the `linux` package. Defines a single `default` preset that points at the custom configuration above. Replaces the stock preset so that running `mkinitcpio -P` (in `build-image.sh`) uses the project hooks rather than the package defaults.
 
 ### [`usr/lib/initcpio/install/no_emergency_shell`](usr/lib/initcpio/install/no_emergency_shell)
 

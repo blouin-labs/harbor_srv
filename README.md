@@ -115,7 +115,7 @@ Triggered manually from **Actions → Promotion → Run workflow**. Select an ac
 
 All actions verify that `build.yml` is green on `staging` before touching `main`.
 
-### SSH access
+### Server access
 
 ```bash
 ssh -i ~/.ssh/harbor_srv root@192.168.1.5

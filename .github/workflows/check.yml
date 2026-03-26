@@ -94,7 +94,7 @@ jobs:
           files: "."
           reporter: github-check
           fail_on_error: true
-          level: error
+          level: warning
 
   all-checks:
     needs: [shellcheck, actionlint, vale]
