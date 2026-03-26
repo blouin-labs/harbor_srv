@@ -6,7 +6,7 @@
 
 A bare-minimum, stateless Arch Linux server for hosting Docker containers on a Lenovo ThinkPad connected to a Synology NAS.
 
-The core idea: the OS is a disposable, reproducible artifact. When something goes wrong, you reflash — you don't troubleshoot. Upgrades are handled the same way as deployments.
+The core idea: the OS is a disposable, reproducible artifact. When something goes wrong, you reflash—you don't troubleshoot. Upgrades are handled the same way as deployments.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ The core idea: the OS is a disposable, reproducible artifact. When something goe
 
 ## Architecture
 
-CI builds a root filesystem image from a package list and a config overlay. That image is written directly to one of two NVMe partitions (A/B layout). The bootloader automatically falls back to the previous partition if the new one fails to boot.
+CI builds a root filesystem image from a package list and a configuration overlay. That image is written directly to one of two NVMe partitions (A/B layout). The bootloader automatically falls back to the previous partition if the new one fails to boot.
 
 ```
 GitHub Actions
@@ -101,17 +101,17 @@ curl -O https://raw.githubusercontent.com/JCBlouin/harbor_srv/main/scripts/insta
 bash install.sh /dev/nvme0n1 harbor_srv-root.img.zst
 ```
 
-4. Reboot — disable Secure Boot in UEFI first (bootloader is unsigned)
+4. Reboot—disable Secure Boot in UEFI first (bootloader is unsigned)
 
 ### Deploying an update
 
 Triggered manually from **Actions → Promotion → Run workflow**. Select an action from the dropdown:
 
-**promote-and-deploy** (default, most common) — promotes `staging` to `main` and immediately deploys to the server. Type `ok reboot` to confirm. The server will reboot. No image rebuild — the artifact already uploaded by `build.yml` on `staging` is downloaded and flashed directly.
+**promote-and-deploy** (default, most common)—promotes `staging` to `main` and immediately deploys to the server. Type `ok reboot` to confirm. The server will reboot. No image rebuild—the artifact already uploaded by `build.yml` on `staging` is downloaded and flashed directly.
 
-**promote** — fast-forwards `main` to `staging` without deploying. No confirmation required.
+**promote**—fast-forwards `main` to `staging` without deploying. No confirmation required.
 
-**deploy** — flashes the server without promoting. Type `ok reboot` to confirm.
+**deploy**—flashes the server without promoting. Type `ok reboot` to confirm.
 
 All actions verify that `build.yml` is green on `staging` before touching `main`.
 
@@ -123,7 +123,7 @@ ssh -i ~/.ssh/harbor_srv root@192.168.1.5
 
 ## Making changes
 
-All OS configuration lives in `profile/`. To add a package, add it to `profile/packages.x86_64`. To add or change a config file, add it under `profile/airootfs/` at the path it should appear on the root filesystem.
+All OS configuration lives in `profile/`. To add a package, add it to `profile/packages.x86_64`. To add or change a configuration file, add it under `profile/airootfs/` at the path it should appear on the root filesystem.
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org) (`feat:`, `fix:`, `docs:`, `chore:`, etc.).
 
@@ -148,17 +148,17 @@ flowchart TD
    git checkout staging && git pull
    git checkout -b feat/your-change
    ```
-2. **Open a PR targeting `staging`** — `check.yml` runs shellcheck, actionlint, and vale (no build).
-3. **Rebase and merge** into `staging` (no merge commits) — `build.yml` builds the image and uploads the artifact.
-4. **Promote when ready** — go to **Actions → Promotion → Run workflow** and select an action:
-   - **promote-and-deploy** — promotes and immediately flashes the server, type `ok reboot`.
-   - **promote** — fast-forwards `staging` → `main`, no deploy.
+2. **Open a PR targeting `staging`**—`check.yml` runs `shellcheck`, `actionlint`, and vale (no build).
+3. **Rebase and merge** into `staging` (no merge commits)—`build.yml` builds the image and uploads the artifact.
+4. **Promote when ready**—go to **Actions → Promotion → Run workflow** and select an action:
+   - **promote-and-deploy**—promotes and immediately flashes the server, type `ok reboot`.
+   - **promote**—fast-forwards `staging` → `main`, no deploy.
 
-> `staging` and `main` are always at the same commit after a promotion — divergence is structurally impossible with fast-forward-only merges.
+> `staging` and `main` are always at the same commit after a promotion—divergence is structurally impossible with fast-forward-only merges.
 
 ## Updating the stack
 
-All package versions and the build environment are pinned to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/build.yml`** and **`.github/workflows/check.yml`** — two adjacent values in each:
+All package versions and the build environment are pinned to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/build.yml`** and **`.github/workflows/check.yml`**—two adjacent values in each:
 
 1. Update `ARCH_SNAPSHOT` to the new date (`YYYY/MM/DD`). Check [archive.archlinux.org/repos](https://archive.archlinux.org/repos/) to confirm the date is available.
 2. Update the `container.image` digest to match. Fetch it with:
@@ -168,4 +168,4 @@ docker manifest inspect --verbose archlinux/archlinux:latest \
   | grep -m1 '"digest"' | awk -F'"' '{print $4}'
 ```
 
-3. Open a PR — CI builds the new image for review before it reaches the server.
+3. Open a PR—CI builds the new image for review before it reaches the server.

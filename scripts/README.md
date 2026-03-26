@@ -22,17 +22,17 @@ sudo ./scripts/build-image.sh [profile_dir] [output_dir]
 **What it does:**
 
 1. Creates a 4GB raw ext4 image
-2. Mounts it via loopback
+2. Mounts it via `loopback`
 3. Runs `pacstrap` to install all packages from `profile/packages.x86_64`
 4. Copies `profile/airootfs/` overlay verbatim into the image
 5. Applies file permissions from `profile/profiledef.sh`
-6. Sets hostname, generates locale, enables systemd services
-7. Generates initramfs with `mkinitcpio -P`
+6. Sets `hostname`, generates locale, enables `systemd` services
+7. Generates `initramfs` with `mkinitcpio -P`
 8. Compresses with `zstd -T0 -10` and writes a SHA256 checksum
 
 **Output:** `output/harbor_srv-root.img.zst` + `output/harbor_srv-root.img.zst.sha256`
 
-The mkinitcpio pacman hook is suppressed during `pacstrap` and run manually after the overlay is in place. This ensures the initramfs is built with the correct hooks and preset from the profile rather than defaults.
+The `mkinitcpio` `pacman` hook is suppressed during `pacstrap` and run manually after the overlay is in place. This ensures the `initramfs` is built with the correct hooks and preset from the profile rather than defaults.
 
 ## `install.sh`
 
@@ -44,7 +44,7 @@ sudo ./scripts/install.sh /dev/nvme0n1 harbor_srv-root.img.zst
 
 **What it does:**
 
-1. Partitions the disk with the A/B layout (prompts for confirmation — destructive)
+1. Partitions the disk with the A/B layout (prompts for confirmation—destructive)
 2. Formats all four partitions
 3. Writes the image to Root A and resizes the filesystem to fill the partition
 4. Installs systemd-boot to the ESP

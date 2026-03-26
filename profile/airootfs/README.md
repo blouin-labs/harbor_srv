@@ -2,7 +2,7 @@
 
 # airootfs/
 
-Config overlay copied verbatim into the root filesystem during `build-image.sh`. Every file here appears at the same path in the installed system. Permissions are set separately via `profiledef.sh` — see [`profile/README.md`](../README.md).
+Configuration overlay copied verbatim into the root filesystem during `build-image.sh`. Every file here appears at the same path in the installed system. Permissions are set separately via `profiledef.sh`—see [`profile/README.md`](../README.md).
 
 > This README is stripped from the image at build time.
 
@@ -11,7 +11,7 @@ Config overlay copied verbatim into the root filesystem during `build-image.sh`.
 - [SSH](#ssh)
 - [Networking](#networking)
 - [NFS mount](#nfs-mount)
-- [Initramfs](#initramfs)
+- [initramfs](#initramfs)
 - [Runner](#runner)
 - [Locale](#locale)
 - [Credentials](#credentials)
@@ -58,15 +58,15 @@ Drop-in for `docker.service` that adds a hard dependency on the Synology NFS mou
 
 ---
 
-## Initramfs
+## initramfs
 
 ### [`etc/mkinitcpio.conf.d/archiso.conf`](etc/mkinitcpio.conf.d/archiso.conf)
 
-Custom mkinitcpio hooks config. Specifies the minimal hook set needed to boot from an ext4 image on bare hardware: `base udev modconf block filesystems fsck no_emergency_shell`. `autodetect` is intentionally omitted — it scans `/sys` at build time, which in a CI container reflects the runner VM hardware, not the target ThinkPad. This file is referenced by `linux.preset` below.
+Custom `mkinitcpio` hooks configuration. Specifies the minimal hook set needed to boot from an ext4 image on bare hardware: `base udev modconf block filesystems fsck no_emergency_shell`. `autodetect` is intentionally omitted—it scans `/sys` at build time, which in a CI container reflects the runner VM hardware, not the target ThinkPad. This file is referenced by `linux.preset` below.
 
 ### [`etc/mkinitcpio.d/linux.preset`](etc/mkinitcpio.d/linux.preset)
 
-mkinitcpio preset for the `linux` package. Defines a single `default` preset that points at our custom config above. Replaces the stock preset so that running `mkinitcpio -P` (in `build-image.sh`) uses our hooks rather than the package defaults.
+mkinitcpio preset for the `linux` package. Defines a single `default` preset that points at our custom configuration above. Replaces the stock preset so that running `mkinitcpio -P` (in `build-image.sh`) uses our hooks rather than the package defaults.
 
 ### [`usr/lib/initcpio/install/no_emergency_shell`](usr/lib/initcpio/install/no_emergency_shell)
 
@@ -74,23 +74,23 @@ Build-time mkinitcpio hook. Bundles `blkid`, `sed`, and the runtime hook script 
 
 ### [`usr/lib/initcpio/hooks/no_emergency_shell`](usr/lib/initcpio/hooks/no_emergency_shell)
 
-Runtime mkinitcpio hook. Redefines `launch_interactive_shell` so that any initramfs-stage boot failure (missing init, failed root mount, etc.) triggers automatic slot failover instead of dropping to an interactive emergency shell — which would stall a headless server indefinitely.
+Runtime `mkinitcpio` hook. Redefines `launch_interactive_shell` so that any initramfs-stage boot failure (missing init, failed root mount, etc.) triggers automatic slot failover instead of dropping to an interactive emergency shell—which would stall a headless server indefinitely.
 
-On failure: reads the failing slot's PARTUUID from `/proc/cmdline`, loads `/new_root/etc/harbor/partitions.conf`, mounts the ESP, removes the failing slot's boot entries, flips `loader.conf` to the other slot, and reboots. Falls back to a blind sysrq reboot (consuming one try-counter cycle) if the partition config or ESP are unreachable.
+On failure: reads the failing slot's PARTUUID from `/proc/cmdline`, loads `/new_root/etc/harbor/partitions.conf`, mounts the ESP, removes the failing slot's boot entries, flips `loader.conf` to the other slot, and reboots. Falls back to a blind `sysrq` reboot (consuming one try-counter cycle) if the partition configuration or ESP are unreachable.
 
 ---
 
 ## Runner
 
-The GitHub Actions self-hosted runner runs as a dedicated `runner` user (UID 968) — never as root. The runner user is a member of the `docker` group so workflows can use Docker. The bootstrap script runs as root (to download and set up the NFS directory) but switches to the `runner` user for registration via `runuser`.
+The GitHub Actions self-hosted runner runs as a dedicated `runner` user (UID 968)—never as root. The runner user is a member of the `docker` group so workflows can use Docker. The bootstrap script runs as root (to download and set up the NFS directory) but switches to the `runner` user for registration via `runuser`.
 
 ### [`usr/local/bin/harbor-runner-bootstrap`](usr/local/bin/harbor-runner-bootstrap)
 
 One-shot script that downloads and registers the GitHub Actions self-hosted runner on first boot. Idempotent: if the runner is already registered (`.runner` exists on the NFS share), exits immediately. Otherwise downloads the latest runner release to the NFS share, sets ownership to `runner:runner`, and registers using the token file as the `runner` user.
 
-The token file is deleted after registration — it's single-use and shouldn't persist on the NFS share.
+The token file is deleted after registration—it's single-use and shouldn't persist on the NFS share.
 
-**First-time setup:** Before booting the image for the first time, place a GitHub Actions registration token at `/mnt/synology/harbor_srv/runner/token` on the NFS share. Generate one at: repo Settings → Actions → Runners → New self-hosted runner. The token is deleted automatically after successful registration.
+**First-time setup:** Before booting the image for the first time, place a GitHub Actions registration token at `/mnt/synology/harbor_srv/runner/token` on the NFS share. Generate one at: repository Settings → Actions → Runners → New self-hosted runner. The token is deleted automatically after successful registration.
 
 ### [`etc/systemd/system/harbor-runner-bootstrap.service`](etc/systemd/system/harbor-runner-bootstrap.service)
 
@@ -98,7 +98,7 @@ Runs `harbor-runner-bootstrap` as a one-shot service after the NFS mount comes u
 
 ### [`etc/systemd/system/harbor-runner.service`](etc/systemd/system/harbor-runner.service)
 
-Runs the GitHub Actions runner (`run.sh` on the NFS share) as the `runner` user. Depends on both the bootstrap service (runner must be registered first) and the NFS mount (`BindsTo` — stops if NFS goes away). The runner binary lives on NFS and survives A/B slot switches; it also self-updates when GitHub requires a newer version.
+Runs the GitHub Actions runner (`run.sh` on the NFS share) as the `runner` user. Depends on both the bootstrap service (runner must be registered first) and the NFS mount (`BindsTo`—stops if NFS goes away). The runner binary lives on NFS and survives A/B slot switches; it also self-updates when GitHub requires a newer version.
 
 ---
 
@@ -106,7 +106,7 @@ Runs the GitHub Actions runner (`run.sh` on the NFS share) as the `runner` user.
 
 ### [`etc/locale.conf`](etc/locale.conf)
 
-Sets the system locale to `C.UTF-8` — a minimal, dependency-free locale with full UTF-8 support. No locale data packages needed.
+Sets the system locale to `C.UTF-8`—a minimal, dependency-free locale with full UTF-8 support. No locale data packages needed.
 
 ---
 
@@ -114,11 +114,11 @@ Sets the system locale to `C.UTF-8` — a minimal, dependency-free locale with f
 
 ### [`etc/passwd`](etc/passwd)
 
-System user database. Declares all users including package-created system accounts and the `runner` user (UID 968). This overlay replaces the pacstrap-generated file — when adding a package that creates a system user, its entry must be added here.
+System user database. Declares all users including package-created system accounts and the `runner` user (UID 968). This overlay replaces the `pacstrap`-generated file—when adding a package that creates a system user, its entry must be added here.
 
 ### [`etc/shadow`](etc/shadow)
 
-Password database. Sets an empty root password (accessible only via SSH key — password auth is disabled in `sshd_config`). The `runner` user has a locked password (`!*`). Issue #13 tracks locking root's password too.
+Password database. Sets an empty root password (accessible only via SSH key—password auth is disabled in `sshd_config`). The `runner` user has a locked password (`!*`). Issue #13 tracks locking root's password too.
 
 ### [`etc/group`](etc/group)
 
