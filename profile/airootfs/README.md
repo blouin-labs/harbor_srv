@@ -2,7 +2,7 @@
 
 # airootfs/
 
-Configuration overlay copied verbatim into the root filesystem during `build-image.sh`. Every file here appears at the same path in the installed system. Permissions are set separately via `profiledef.sh`—see [`profile/README.md`](../README.md).
+Configuration overlay copied verbatim into the root filesystem during `build-image.sh`. Every file here appears at the same path in the installed system. Permissions are set separately via `profiledef.sh`. See [`profile/README.md`](../README.md).
 
 > This README is stripped from the image at build time.
 
@@ -98,7 +98,7 @@ Runs `harbor-runner-bootstrap` as a one-shot service after the NFS mount comes u
 
 ### [`etc/systemd/system/harbor-runner.service`](etc/systemd/system/harbor-runner.service)
 
-Runs the GitHub Actions runner (`run.sh` on the NFS share) as the `runner` user. Depends on both the bootstrap service (runner must be registered first) and the NFS mount (`BindsTo`—stops if NFS goes away). The runner binary lives on NFS and survives A/B slot switches; it also self-updates when GitHub requires a newer version.
+Runs the GitHub Actions runner (`run.sh` on the NFS share) as the `runner` user. Depends on both the bootstrap service (runner must be registered first) and the NFS mount (`BindsTo`; stops if NFS goes away). The runner binary lives on NFS and survives A/B slot switches; it also self-updates when GitHub requires a newer version.
 
 ---
 
@@ -106,7 +106,7 @@ Runs the GitHub Actions runner (`run.sh` on the NFS share) as the `runner` user.
 
 ### [`etc/locale.conf`](etc/locale.conf)
 
-Sets the system locale to `C.UTF-8`—a minimal, dependency-free locale with full UTF-8 support. No locale data packages needed.
+Sets the system locale to `C.UTF-8`, a minimal, dependency-free locale with full UTF-8 support. No locale data packages needed.
 
 ---
 
