@@ -6,9 +6,9 @@
 
 A bare-minimum, stateless Arch Linux server for hosting Docker containers on a Lenovo ThinkPad connected to a Synology NAS.
 
-The core idea: the OS is a disposable, reproducible artifact. When something goes wrong, you reflash—you don't troubleshoot. Upgrades are handled the same way as deployments.
+The core idea: the OS is a disposable, reproducible artifact. When something goes wrong, you reflash—you don't troubleshoot. The project handles upgrades the same way as deployments.
 
-## Table of Contents
+## Table of contents
 
 - [Architecture](#architecture)
   - [Zero-drift guarantee](#zero-drift-guarantee)
@@ -25,7 +25,7 @@ The core idea: the OS is a disposable, reproducible artifact. When something goe
 
 ## Architecture
 
-CI builds a root filesystem image from a package list and a configuration overlay. That image is written directly to one of two NVMe partitions (A/B layout). The bootloader automatically falls back to the previous partition if the new one fails to boot.
+CI builds a root filesystem image from a package list and a configuration overlay. CI writes that image directly to one of two NVMe partitions (A/B layout). The bootloader automatically falls back to the previous partition if the new one fails to boot.
 
 ```
 GitHub Actions
@@ -51,7 +51,7 @@ GitHub Actions
 
 ### Zero-drift guarantee
 
-Nothing on the root filesystem persists across deploys. The entire root is replaced on each deployment. Persistent state lives on the NFS share (Docker volumes, compose files) or the `/data` partition.
+Nothing on the root filesystem persists across deploys. Each deployment replaces the entire root. Persistent state lives on the NFS share (Docker volumes, compose files) or the `/data` partition.
 
 ### A/B boot with automatic fallback
 
@@ -101,13 +101,13 @@ curl -O https://raw.githubusercontent.com/JCBlouin/harbor_srv/main/scripts/insta
 bash install.sh /dev/nvme0n1 harbor_srv-root.img.zst
 ```
 
-4. Reboot—disable Secure Boot in UEFI first (bootloader is unsigned)
+4. Reboot—disable Secure Boot in UEFI first (unsigned bootloader)
 
 ### Deploying an update
 
 Triggered manually from **Actions → Promotion → Run workflow**. Select an action from the dropdown:
 
-**promote-and-deploy** (default, most common)—promotes `staging` to `main` and immediately deploys to the server. Type `ok reboot` to confirm. The server will reboot. No image rebuild—the artifact already uploaded by `build.yml` on `staging` is downloaded and flashed directly.
+**promote-and-deploy** (default, most common)—promotes `staging` to `main` and immediately deploys to the server. Type `ok reboot` to confirm. The server will reboot. No image rebuild—the promote workflow downloads and flashes the artifact already uploaded by `build.yml` on `staging`.
 
 **promote**: fast-forwards `main` to `staging` without deploying. No confirmation required.
 
@@ -158,7 +158,7 @@ flowchart TD
 
 ## Updating the stack
 
-All package versions and the build environment are pinned to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/build.yml`** and **`.github/workflows/check.yml`**: two adjacent values in each:
+The build pins all package versions and the build environment to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/build.yml`** and **`.github/workflows/check.yml`**: two adjacent values in each:
 
 1. Update `ARCH_SNAPSHOT` to the new date (`YYYY/MM/DD`). Check [archive.archlinux.org/repos](https://archive.archlinux.org/repos/) to confirm the date is available.
 2. Update the `container.image` digest to match. Fetch it with:

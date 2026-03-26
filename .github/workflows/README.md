@@ -1,6 +1,8 @@
 [← harbor_srv](../../README.md)
 
+<!-- vale Microsoft.Headings = NO -->
 # .github/workflows/
+<!-- vale Microsoft.Headings = YES -->
 
 CI/CD pipeline for harbor_srv. Uses a two-branch model:
 
@@ -49,7 +51,7 @@ Reusable workflow (`workflow_call`). Checks runner availability via the GitHub A
 
 Priority order: `wsl-docker-runner` → `harbor-srv-docker` → `ubuntu-latest`
 
-The bare-metal `harbor-srv` runner is excluded—it's reserved for deploy only.
+The pipeline excludes the bare-metal `harbor-srv` runner—reserved for deploy only.
 
 ---
 

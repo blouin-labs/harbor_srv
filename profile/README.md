@@ -1,10 +1,12 @@
 [← harbor_srv](../README.md)
 
+<!-- vale Microsoft.Headings = NO -->
 # profile/
+<!-- vale Microsoft.Headings = YES -->
 
 The OS profile—everything baked into the root filesystem image.
 
-## Table of Contents
+## Table of contents
 
 - [Files](#files)
   - [packages.x86_64](#packagesx86_64)
@@ -19,7 +21,7 @@ The OS profile—everything baked into the root filesystem image.
 
 ### `packages.x86_64`
 
-Package list installed via `pacstrap`. One package per line; lines starting with `#` are comments.
+Package list installed via `pacstrap`. One package per line. Lines starting with `#` are comments.
 
 Current packages:
 
@@ -38,7 +40,7 @@ pacman configuration used during the build. Passed to `pacstrap -C` so the build
 
 ### `profiledef.sh`
 
-File permission overrides applied after the `airootfs` overlay is copied. `cp -a` preserves permissions from the repository, but some paths need specific modes that differ from what git stores.
+File permission overrides applied after copying the `airootfs` overlay. `cp -a` preserves permissions from the repository, but some paths need specific modes that differ from what git stores.
 
 ```bash
 file_permissions=(
@@ -50,11 +52,11 @@ file_permissions=(
 )
 ```
 
-The `/root` and `/root/.ssh` entries are critical. Without them, `sshd` refuses key authentication because StrictModes checks that the home directory isn't world-accessible.
+The `/root` and `/root/.ssh` entries are critical. Without them, `sshd` refuses key authentication because StrictModes checks that the home directory isn't world-readable.
 
 ## `airootfs/`
 
-Configuration overlay copied verbatim into the root filesystem (`cp -a airootfs/. mnt/`). Paths here map directly to their location in the installed system. README files inside `airootfs/` are stripped from the image at build time.
+Configuration overlay copied verbatim into the root filesystem (`cp -a airootfs/. mnt/`). Paths here map directly to their location in the installed system. The build strips README files inside `airootfs/` from the image.
 
 See [`airootfs/README.md`](airootfs/README.md) for documentation of every configuration file.
 

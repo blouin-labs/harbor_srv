@@ -1,10 +1,12 @@
 [← harbor_srv](../README.md)
 
+<!-- vale Microsoft.Headings = NO -->
 # scripts/
+<!-- vale Microsoft.Headings = YES -->
 
 Operational scripts for building, installing, and deploying harbor_srv.
 
-## Table of Contents
+## Table of contents
 
 - [build-image.sh](#build-imagesh)
 - [install.sh](#installsh)
@@ -32,7 +34,7 @@ sudo ./scripts/build-image.sh [profile_dir] [output_dir]
 
 **Output:** `output/harbor_srv-root.img.zst` + `output/harbor_srv-root.img.zst.sha256`
 
-The `mkinitcpio` `pacman` hook is suppressed during `pacstrap` and run manually after the overlay is in place. This ensures the `initramfs` is built with the correct hooks and preset from the profile rather than defaults.
+The build suppresses the `mkinitcpio` `pacman` hook during `pacstrap` and runs it manually after placing the overlay. This ensures the build uses the correct hooks and preset from the profile rather than defaults.
 
 ## `install.sh`
 
@@ -62,7 +64,7 @@ sudo ./scripts/install.sh /dev/nvme0n1 harbor_srv-root.img.zst
 | p3 | 10G | Root B | ext4 |
 | p4 | remainder | Data | ext4 |
 
-After installation, disable Secure Boot in the UEFI firmware (the bootloader is unsigned) and reboot.
+After installation, disable Secure Boot in the UEFI firmware (unsigned bootloader) and reboot.
 
 ## `deploy.sh`
 
@@ -91,7 +93,7 @@ Boot entries use systemd-boot's try-counter convention. The filename `harbor-b+3
 
 On successful boot, `systemd-bless-boot.service` renames the file to the blessed form (`harbor-b.conf`), locking in the new root.
 
-The glob default (`harbor-b*`) matches both the counted form (`harbor-b+3.conf`) and the blessed form (`harbor-b.conf`), so no update to `loader.conf` is needed after blessing.
+The glob default (`harbor-b*`) matches both the counted form (`harbor-b+3.conf`) and the blessed form (`harbor-b.conf`), so blessing requires no update to `loader.conf`.
 
 **Typical deploy workflow:**
 

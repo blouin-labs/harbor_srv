@@ -19,3 +19,13 @@ PARTUUIDs
 networkd
 Multicast
 Docker
+NFS
+NAS
+ISO
+ESP
+EFI
+UEFI
+UID
+GID
+LAN
+DNS

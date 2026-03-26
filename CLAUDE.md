@@ -1,6 +1,8 @@
+<!-- vale Microsoft.Headings = NO -->
 # CLAUDE.md
+<!-- vale Microsoft.Headings = YES -->
 
-Don't edit this file. The actual instructions for this repository are stored privately in `blouin-labs/claude`.
+Don't edit this file. The actual instructions for this repository live privately in `blouin-labs/claude`.
 
 At the start of every session, run the following commands and read their output before proceeding with any work:
 
