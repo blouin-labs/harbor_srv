@@ -4,7 +4,6 @@ actionlint
 Synology
 pacman
 loopback
-hostname
 systemd
 initramfs
 mkinitcpio
