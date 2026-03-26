@@ -4,15 +4,15 @@
 
 CI/CD pipeline for harbor_srv. Uses a two-branch model:
 
-- **Feature branches** (`feat/`, `fix/`, `docs/`, `chore/`) — local development, PR'd into `staging`
-- **`staging`** — integration branch; PRs trigger checks, pushes trigger the image build
-- **`main`** — production; fast-forward promoted from `staging` via the Promotion workflow
+- **Feature branches** (`feat/`, `fix/`, `docs/`, `chore/`)—local development, merged into `staging` via pull request
+- **`staging`**—integration branch; PRs trigger checks, pushes trigger the image build
+- **`main`**—production; fast-forward promoted from `staging` via the Promotion workflow
 
 ## Workflows
 
 ### [check.yml](check.yml)
 
-Runs on **PR to `staging`**. Path-filtered — only fires when `profile/**`, `scripts/**`, `.github/workflows/**`, `**.md`, or `.vale.ini` change.
+Runs on **PR to `staging`**. Path-filtered—only fires when `profile/**`, `scripts/**`, `.github/workflows/**`, `**.md`, or `.vale.ini` change.
 
 Three jobs run in parallel (each skipped if its paths didn't change):
 
@@ -22,7 +22,7 @@ Three jobs run in parallel (each skipped if its paths didn't change):
 | `actionlint` | `.github/workflows/**` | Runs [actionlint](https://github.com/rhysd/actionlint) to lint workflow files |
 | `vale` | `**.md`, `.vale.ini` | Runs [Vale](https://vale.sh/) prose linter on all Markdown files |
 
-An `all-checks` aggregator job collects results — this is the required status check on PRs.
+An `all-checks` aggregator job collects results—this is the required status check on PRs.
 
 ---
 
@@ -49,13 +49,13 @@ Reusable workflow (`workflow_call`). Checks runner availability via the GitHub A
 
 Priority order: `wsl-docker-runner` → `harbor-srv-docker` → `ubuntu-latest`
 
-The bare-metal `harbor-srv` runner is excluded — it is reserved for deploy only.
+The bare-metal `harbor-srv` runner is excluded—it's reserved for deploy only.
 
 ---
 
 ### [promotion.yml](promotion.yml)
 
-`workflow_dispatch` only — triggered manually via **Actions → Promotion → Run workflow**.
+`workflow_dispatch` only—triggered manually via **Actions → Promotion → Run workflow**.
 
 Select an action from the dropdown:
 
@@ -65,7 +65,7 @@ Select an action from the dropdown:
 | `promote` | Verifies CI on `staging` and fast-forwards `main`. No deploy. | None |
 | `deploy` | Flashes the server without promoting. Defaults to latest successful staging build; accepts optional `run_id`. | `ok reboot` |
 
-All actions verify that `build.yml` is green on `staging` before touching `main`. No action ever rebuilds the image — it always uses the artifact already produced by `build.yml`.
+All actions verify that `build.yml` is green on `staging` before touching `main`. No action ever rebuilds the image—it always uses the artifact already produced by `build.yml`.
 
 ---
 
@@ -75,7 +75,7 @@ All actions verify that `build.yml` is green on `staging` before touching `main`
 
 | Action | What it does |
 |--------|-------------|
-| `rescan` | Rescans the NFS share for new or removed stacks |
+| `rescan` | Scans the NFS share for new or removed stacks |
 | `update` | Pulls latest images and recreates changed containers |
 | `stop` | Stops all managed stacks |
 | `start` | Starts all managed stacks |

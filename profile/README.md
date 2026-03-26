@@ -2,7 +2,7 @@
 
 # profile/
 
-The OS profile — everything baked into the root filesystem image.
+The OS profile—everything baked into the root filesystem image.
 
 ## Table of Contents
 
@@ -38,7 +38,7 @@ pacman configuration used during the build. Passed to `pacstrap -C` so the build
 
 ### `profiledef.sh`
 
-File permission overrides applied after the `airootfs` overlay is copied. `cp -a` preserves permissions from the repo, but some paths need specific modes that differ from what git stores.
+File permission overrides applied after the `airootfs` overlay is copied. `cp -a` preserves permissions from the repository, but some paths need specific modes that differ from what git stores.
 
 ```bash
 file_permissions=(
@@ -50,18 +50,18 @@ file_permissions=(
 )
 ```
 
-The `/root` and `/root/.ssh` entries are critical. Without them, `sshd` refuses key authentication because StrictModes checks that the home directory is not world-accessible.
+The `/root` and `/root/.ssh` entries are critical. Without them, `sshd` refuses key authentication because StrictModes checks that the home directory isn't world-accessible.
 
 ## `airootfs/`
 
-Config overlay copied verbatim into the root filesystem (`cp -a airootfs/. mnt/`). Paths here map directly to their location in the installed system. README files inside `airootfs/` are stripped from the image at build time.
+Configuration overlay copied verbatim into the root filesystem (`cp -a airootfs/. mnt/`). Paths here map directly to their location in the installed system. README files inside `airootfs/` are stripped from the image at build time.
 
-See [`airootfs/README.md`](airootfs/README.md) for documentation of every config file.
+See [`airootfs/README.md`](airootfs/README.md) for documentation of every configuration file.
 
 ## Making changes
 
 - **Add a package**: add it to `packages.x86_64`
-- **Add or modify a config file**: add it under `airootfs/` at the path it should appear on the root filesystem
+- **Add or modify a configuration file**: add it under `airootfs/` at the path it should appear on the root filesystem
 - **Fix file permissions**: add the path to `profiledef.sh`
 
 Push to a branch, open a PR. CI builds and uploads the artifact. Merge and deploy.
