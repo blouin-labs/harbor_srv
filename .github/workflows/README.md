@@ -5,8 +5,8 @@
 CI/CD pipeline for harbor_srv. Uses a two-branch model:
 
 - **Feature branches** (`feat/`, `fix/`, `docs/`, `chore/`)—local development, merged into `staging` via pull request
-- **`staging`**—integration branch; PRs trigger checks, pushes trigger the image build
-- **`main`**—production; fast-forward promoted from `staging` via the Promotion workflow
+- **`staging`**: integration branch; PRs trigger checks, pushes trigger the image build
+- **`main`**: production; fast-forward promoted from `staging` via the Promotion workflow
 
 ## Workflows
 
