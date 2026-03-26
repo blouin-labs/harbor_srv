@@ -61,7 +61,7 @@ Each deploy writes a new image to the inactive root partition with a systemd-boo
 
 | Component | Detail |
 |-----------|--------|
-| Machine | Lenovo ThinkPad (hostname: `harbor-srv`) |
+| Machine | Lenovo ThinkPad (host name: `harbor-srv`) |
 | IP | 192.168.1.5 (static) |
 | NVMe | 476GB |
 | NAS | Synology at 192.168.1.10 |
