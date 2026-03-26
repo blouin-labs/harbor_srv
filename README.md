@@ -109,9 +109,9 @@ Triggered manually from **Actions → Promotion → Run workflow**. Select an ac
 
 **promote-and-deploy** (default, most common)—promotes `staging` to `main` and immediately deploys to the server. Type `ok reboot` to confirm. The server will reboot. No image rebuild—the artifact already uploaded by `build.yml` on `staging` is downloaded and flashed directly.
 
-**promote**—fast-forwards `main` to `staging` without deploying. No confirmation required.
+**promote**: fast-forwards `main` to `staging` without deploying. No confirmation required.
 
-**deploy**—flashes the server without promoting. Type `ok reboot` to confirm.
+**deploy**: flashes the server without promoting. Type `ok reboot` to confirm.
 
 All actions verify that `build.yml` is green on `staging` before touching `main`.
 
@@ -148,17 +148,17 @@ flowchart TD
    git checkout staging && git pull
    git checkout -b feat/your-change
    ```
-2. **Open a PR targeting `staging`**—`check.yml` runs `shellcheck`, `actionlint`, and vale (no build).
-3. **Rebase and merge** into `staging` (no merge commits)—`build.yml` builds the image and uploads the artifact.
-4. **Promote when ready**—go to **Actions → Promotion → Run workflow** and select an action:
-   - **promote-and-deploy**—promotes and immediately flashes the server, type `ok reboot`.
-   - **promote**—fast-forwards `staging` → `main`, no deploy.
+2. **Open a PR targeting `staging`**: `check.yml` runs `shellcheck`, `actionlint`, and vale (no build).
+3. **Rebase and merge** into `staging` (no merge commits): `build.yml` builds the image and uploads the artifact.
+4. **Promote when ready**: go to **Actions → Promotion → Run workflow** and select an action:
+   - **promote-and-deploy**: promotes and immediately flashes the server, type `ok reboot`.
+   - **promote**: fast-forwards `staging` → `main`, no deploy.
 
 > `staging` and `main` are always at the same commit after a promotion—divergence is structurally impossible with fast-forward-only merges.
 
 ## Updating the stack
 
-All package versions and the build environment are pinned to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/build.yml`** and **`.github/workflows/check.yml`**—two adjacent values in each:
+All package versions and the build environment are pinned to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/build.yml`** and **`.github/workflows/check.yml`**: two adjacent values in each:
 
 1. Update `ARCH_SNAPSHOT` to the new date (`YYYY/MM/DD`). Check [archive.archlinux.org/repos](https://archive.archlinux.org/repos/) to confirm the date is available.
 2. Update the `container.image` digest to match. Fetch it with:
