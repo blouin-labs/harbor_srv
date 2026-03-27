@@ -65,7 +65,7 @@ Drop-in for `docker.service` that adds a hard dependency on the NAS mount. Preve
 
 The server runs a local MIT Kerberos KDC (realm `JCB.LOCAL`). Running the KDC on the server itself avoids a chicken-and-egg dependency: Kerberos tickets are available before the NFS mount is attempted, because the KDC starts from local storage. The eventual goal is `sec=krb5i` on the NFS mount (mutual auth + integrity); see issue blouin-labs/issues#43.
 
-The KDC database and server keytab (`/etc/krb5.keytab`) are **secrets**. They are **not** present in this overlay — they are injected into the target partition by `harbor-deploy` at flash time from the `KRB5_SECRETS_B64` Actions secret. See `scripts/README.md` and the PR description for the one-time keytab generation steps.
+The KDC database and server keytab (`/etc/krb5.keytab`) are **secrets**. They're **not** present in this overlay—they're injected into the target partition by `harbor-deploy` at flash time from the `KRB5_SECRETS_B64` Actions secret. See `scripts/README.md` and the PR description for the one-time keytab generation steps.
 
 ### [`etc/krb5.conf`](etc/krb5.conf)
 
