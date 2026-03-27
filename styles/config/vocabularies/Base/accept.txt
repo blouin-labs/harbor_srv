@@ -29,3 +29,10 @@ UID
 GID
 LAN
 DNS
+Kerberos
+keytab
+KDC
+krb5i
+krb5
+GSS
+NFSv4
