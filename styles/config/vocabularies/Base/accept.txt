@@ -43,3 +43,4 @@ DES
 enctypes
 kadmin
 kadmind
+HMAC
