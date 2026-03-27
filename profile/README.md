@@ -33,7 +33,7 @@ Current packages:
 | `efibootmgr` | EFI boot entry management |
 | `docker`, `docker-compose` | Container runtime |
 | `nfs-utils` | NFS client (Synology mount) |
-| `krb5` | MIT Kerberos KDC and client libraries (NFSv4.1 `sec=krb5i`) |
+| `krb5` | MIT Kerberos Key Distribution Center (KDC) daemon and client libraries (NFSv4.1 `sec=krb5i`) |
 
 ### `pacman.conf`
 

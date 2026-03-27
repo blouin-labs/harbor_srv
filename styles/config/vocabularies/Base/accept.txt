@@ -31,8 +31,15 @@ LAN
 DNS
 Kerberos
 keytab
-KDC
 krb5i
 krb5
 GSS
 NFSv4
+MIT
+UDP
+AES
+SHA
+DES
+enctypes
+kadmin
+kadmind

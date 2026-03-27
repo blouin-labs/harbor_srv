@@ -63,7 +63,7 @@ Drop-in for `docker.service` that adds a hard dependency on the NAS mount. Preve
 
 ## Kerberos
 
-The server runs a local MIT Kerberos KDC (realm `JCB.LOCAL`). Running the KDC on the server itself avoids a chicken-and-egg dependency: Kerberos tickets are available before the NFS mount is attempted, because the KDC starts from local storage. The eventual goal is `sec=krb5i` on the NFS mount (mutual auth + integrity); see issue blouin-labs/issues#43.
+The server runs a local MIT Kerberos Key Distribution Center (KDC) (realm `JCB.LOCAL`). Running the KDC on the server itself avoids a chicken-and-egg dependency: Kerberos tickets are available before the NFS mount is attempted, because the KDC starts from local storage. The eventual goal is `sec=krb5i` on the NFS mount (mutual auth + integrity); see issue blouin-labs/issues#43.
 
 The KDC database and server keytab (`/etc/krb5.keytab`) are **secrets**. They're **not** present in this overlay—they're injected into the target partition by `harbor-deploy` at flash time from the `KRB5_SECRETS_B64` Actions secret. See `scripts/README.md` and the PR description for the one-time keytab generation steps.
 
@@ -73,11 +73,11 @@ Kerberos client library configuration. Defines realm `JCB.LOCAL` with KDC and ad
 
 ### [`var/lib/krb5kdc/kdc.conf`](var/lib/krb5kdc/kdc.conf)
 
-KDC daemon configuration. KDC listens on port 88 (UDP and TCP). Only AES-256 and AES-128 with SHA-1 (`aes256-cts-hmac-sha1-96`, `aes128-cts-hmac-sha1-96`) are enabled — older DES/RC4 enctypes are absent. Maximum ticket life matches `krb5.conf` (24h/7d).
+KDC daemon configuration. The KDC listens on port 88 (UDP and TCP). Only AES-256 and AES-128 with SHA-1 (`aes256-cts-hmac-sha1-96`, `aes128-cts-hmac-sha1-96`) are enabled—older DES/RC4 enctypes are absent. Maximum ticket life matches `krb5.conf` (24h/7d).
 
 ### [`var/lib/krb5kdc/kadm5.acl`](var/lib/krb5kdc/kadm5.acl)
 
-kadmin access control list. Grants full administrative privileges (`*`) to any principal of the form `*/admin@JCB.LOCAL`. Used only for local keytab management — `kadmind` is not enabled in production.
+kadmin access control list. Grants full administrative privileges (`*`) to any principal of the form `*/admin@JCB.LOCAL`. Used only for local keytab management—`kadmind` isn't enabled in production.
 
 ### [`etc/systemd/system/rpc-gssd.service.d/krb5-ordering.conf`](etc/systemd/system/rpc-gssd.service.d/krb5-ordering.conf)
 
