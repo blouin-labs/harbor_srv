@@ -122,17 +122,10 @@ jobs:
     continue-on-error: true
     if: ${{ always() && needs.download.result == 'success' }}
     steps:
-      - name: Stage Kerberos secrets
+      - name: Flash server
         env:
           KRB5_SECRETS_B64: ${{ secrets.KRB5_SECRETS_B64 }}
-        run: |
-          if [ -n "$KRB5_SECRETS_B64" ]; then
-            echo "$KRB5_SECRETS_B64" | base64 -d > /tmp/harbor-krb5-secrets.tar.gz
-            chmod 600 /tmp/harbor-krb5-secrets.tar.gz
-          fi
-
-      - name: Flash server
-        run: sudo /usr/local/sbin/harbor-deploy
+        run: sudo KRB5_SECRETS_B64="$KRB5_SECRETS_B64" /usr/local/sbin/harbor-deploy
 
   verify:
     needs: [flash]
