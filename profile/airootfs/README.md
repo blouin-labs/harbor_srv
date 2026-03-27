@@ -63,7 +63,7 @@ Drop-in for `docker.service` that adds a hard dependency on the NAS mount. Preve
 
 ## Kerberos
 
-The server runs a local MIT Kerberos Key Distribution Center (KDC) with realm `HARBOR.LOCAL`. Running the KDC on the server itself avoids a chicken-and-egg dependency: the KDC starts from local storage before the NFS mount, so Kerberos tickets are ready before the mount begins. The realm name `HARBOR.LOCAL` keeps this server-local realm separate from `jcb.local`, leaving that domain free for a future Docker-based KDC covering broader lab services. The eventual goal is `sec=krb5i` on the NFS mount (mutual auth + integrity). See issue blouin-labs/issues#43.
+The server runs a local MIT Kerberos Key Distribution Center (KDC) with realm `HARBOR.LOCAL`. Running the KDC on the server itself avoids a chicken-and-egg dependency. The KDC starts from local storage before the NFS mount, so tickets are ready when the mount begins. The realm name `HARBOR.LOCAL` keeps this server-local realm separate from `jcb.local`. That leaves `jcb.local` free for a future Docker-based KDC covering broader lab services. The eventual goal is `sec=krb5i` on the NFS mount (mutual auth + integrity). See issue blouin-labs/issues#43.
 
 The KDC database and server keytab (`/etc/krb5.keytab`) are **secrets**. They're **not** present in this overlay—they're injected into the target partition by `harbor-deploy` at flash time from the `KRB5_SECRETS_B64` Actions secret. See `scripts/README.md` and the PR description for the one-time keytab generation steps.
 
@@ -73,7 +73,7 @@ Kerberos client library configuration. Defines realm `HARBOR.LOCAL` with KDC and
 
 ### [`var/lib/krb5kdc/kdc.conf`](var/lib/krb5kdc/kdc.conf)
 
-KDC daemon configuration. The KDC listens on port 88 (UDP and TCP). The supported enctypes are `aes256-cts-hmac-sha1-96` and `aes128-cts-hmac-sha1-96` only. DES and RC4 are absent because both are cryptographically broken. The HMAC-SHA1-96 suffix identifies a message authentication code; SHA-1 isn't collision-sensitive in this role. These enctypes are the current Kerberos standard (RFC 3962). Maximum ticket life matches `krb5.conf` (24h/7d).
+KDC daemon configuration. The KDC listens on port 88 (UDP and TCP). The supported enctypes are `aes256-cts-hmac-sha1-96` and `aes128-cts-hmac-sha1-96` only. DES and RC4 are absent because both are cryptographically broken. The HMAC-SHA1-96 suffix identifies a message authentication code. SHA-1 isn't collision-sensitive in this role. These enctypes are the current Kerberos standard (RFC 3962). Maximum ticket life matches `krb5.conf` (24h/7d).
 
 ### [`var/lib/krb5kdc/kadm5.acl`](var/lib/krb5kdc/kadm5.acl)
 
