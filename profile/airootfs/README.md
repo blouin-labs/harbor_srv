@@ -63,21 +63,21 @@ Drop-in for `docker.service` that adds a hard dependency on the NAS mount. Preve
 
 ## Kerberos
 
-The server runs a local MIT Kerberos Key Distribution Center (KDC) (realm `JCB.LOCAL`). Running the KDC on the server itself avoids a chicken-and-egg dependency: the KDC starts from local storage before the NFS mount begins, so Kerberos tickets are ready. The eventual goal is `sec=krb5i` on the NFS mount (mutual auth + integrity). See issue blouin-labs/issues#43.
+The server runs a local MIT Kerberos Key Distribution Center (KDC) (realm `HARBOR.LOCAL`). Running the KDC on the server itself avoids a chicken-and-egg dependency: the KDC starts from local storage before the NFS mount begins, so Kerberos tickets are ready when the mount is attempted. The realm name is `HARBOR.LOCAL` rather than a personal domain so that a future Docker-based KDC can own `jcb.local` for broader lab use without colliding with this server-local realm. The eventual goal is `sec=krb5i` on the NFS mount (mutual auth + integrity). See issue blouin-labs/issues#43.
 
 The KDC database and server keytab (`/etc/krb5.keytab`) are **secrets**. They're **not** present in this overlay—they're injected into the target partition by `harbor-deploy` at flash time from the `KRB5_SECRETS_B64` Actions secret. See `scripts/README.md` and the PR description for the one-time keytab generation steps.
 
 ### [`etc/krb5.conf`](etc/krb5.conf)
 
-Kerberos client library configuration. Defines realm `JCB.LOCAL` with KDC and admin server both on `localhost`. DNS-based KDC discovery is off (`dns_lookup_kdc = false`) to prevent spoofing. Ticket lifetime is 24 hours, renewable for 7 days.
+Kerberos client library configuration. Defines realm `HARBOR.LOCAL` with KDC and admin server both on `localhost`. DNS-based KDC discovery is off (`dns_lookup_kdc = false`) to prevent realm spoofing via a rogue DNS record. Ticket forwarding is disabled (`forwardable = false`) because NFS does not require delegation; enabling it unnecessarily would expand the blast radius if a service principal were compromised. Ticket lifetime is 24 hours, renewable for 7 days.
 
 ### [`var/lib/krb5kdc/kdc.conf`](var/lib/krb5kdc/kdc.conf)
 
-KDC daemon configuration. The KDC listens on port 88 (UDP and TCP). The configuration enables only AES-256 and AES-128 with SHA-1 (`aes256-cts-hmac-sha1-96`, `aes128-cts-hmac-sha1-96`) enctypes—older DES/RC4 enctypes are absent. Maximum ticket life matches `krb5.conf` (24h/7d).
+KDC daemon configuration. The KDC listens on port 88 (UDP and TCP). Only AES-256 and AES-128 enctypes are enabled (`aes256-cts-hmac-sha1-96`, `aes128-cts-hmac-sha1-96`)—DES and RC4 are intentionally absent as both are cryptographically broken. The HMAC-SHA1-96 suffix refers to a message authentication code and is not a collision-sensitive use of SHA-1; these enctypes remain the current Kerberos standard (RFC 3962). Maximum ticket life matches `krb5.conf` (24h/7d).
 
 ### [`var/lib/krb5kdc/kadm5.acl`](var/lib/krb5kdc/kadm5.acl)
 
-kadmin access control list. Grants full administrative privileges (`*`) to any principal of the form `*/admin@JCB.LOCAL`. Used only for local keytab management. `kadmind` isn't running in production.
+kadmin access control list. Grants full administrative privileges (`*`) to any principal of the form `*/admin@HARBOR.LOCAL`. Used only for one-time keytab generation during setup. `kadmind` is not enabled in production, so this ACL has no runtime effect; it exists so `kadmin.local` works correctly when run manually on the server.
 
 ### [`etc/systemd/system/rpc-gssd.service.d/krb5-ordering.conf`](etc/systemd/system/rpc-gssd.service.d/krb5-ordering.conf)
 
