@@ -1,4 +1,4 @@
-runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-deploy
+runner ALL=(root) NOPASSWD: SETENV: /usr/local/sbin/harbor-deploy
 runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl rescan
 runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl update
 runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl stop
