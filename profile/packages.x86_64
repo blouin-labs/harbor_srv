@@ -11,6 +11,7 @@ pv
 docker
 docker-compose
 nfs-utils
+krb5
 
 # GitHub Actions runner dependencies
 curl

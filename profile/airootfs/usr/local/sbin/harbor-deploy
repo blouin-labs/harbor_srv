@@ -85,6 +85,21 @@ EOF
 mkdir -p "${MOUNT_DIR}/etc/harbor"
 cp "$CONF" "${MOUNT_DIR}/etc/harbor/partitions.conf"
 
+# --- Inject Kerberos secrets (if staged) ---
+KRB5_SECRETS="/tmp/harbor-krb5-secrets.tar.gz"
+if [ -f "$KRB5_SECRETS" ]; then
+    echo ":: Injecting Kerberos secrets..."
+    mkdir -p "${MOUNT_DIR}/var/lib/krb5kdc"
+    tar -xzf "$KRB5_SECRETS" -C "$MOUNT_DIR" --no-same-owner --owner=0 --group=0
+    chmod 700 "${MOUNT_DIR}/var/lib/krb5kdc"
+    chmod 600 "${MOUNT_DIR}/var/lib/krb5kdc"/* 2>/dev/null || true
+    chmod 600 "${MOUNT_DIR}/etc/krb5.keytab"
+    rm -f "$KRB5_SECRETS"
+    echo ":: Kerberos secrets injected."
+else
+    echo "WARNING: ${KRB5_SECRETS} not found — Kerberos will not be functional" >&2
+fi
+
 ESP_MOUNT=$(findmnt -n -o TARGET /boot/efi 2>/dev/null || echo "")
 if [ -z "$ESP_MOUNT" ]; then
     mkdir -p /boot/efi

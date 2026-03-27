@@ -138,7 +138,9 @@ arch-chroot "${WORK_DIR}/mnt" systemctl enable \
     systemd-bless-boot.service \
     harbor-runner-bootstrap.service \
     harbor-runner.service \
-    harbor-compose.service
+    harbor-compose.service \
+    krb5-kdc.service \
+    rpc-gssd.service
 
 # Generate initramfs (now with our custom preset and hooks config)
 arch-chroot "${WORK_DIR}/mnt" mkinitcpio -P
