@@ -44,3 +44,5 @@ enctypes
 kadmin
 kadmind
 HMAC
+RFC
+ACL

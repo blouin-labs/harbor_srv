@@ -73,7 +73,7 @@ Kerberos client library configuration. Defines realm `HARBOR.LOCAL` with KDC and
 
 ### [`var/lib/krb5kdc/kdc.conf`](var/lib/krb5kdc/kdc.conf)
 
-KDC daemon configuration. The KDC listens on port 88 (UDP and TCP). The supported enctypes are `aes256-cts-hmac-sha1-96` and `aes128-cts-hmac-sha1-96` only. DES and RC4 are absent because both are cryptographically broken. The HMAC-SHA1-96 suffix identifies a message authentication code, not a hash — SHA-1 isn't collision-sensitive in this role. These enctypes are the current Kerberos standard (RFC 3962). Maximum ticket life matches `krb5.conf` (24h/7d).
+KDC daemon configuration. The KDC listens on port 88 (UDP and TCP). The supported enctypes are `aes256-cts-hmac-sha1-96` and `aes128-cts-hmac-sha1-96` only. DES and RC4 are absent because both are cryptographically broken. The HMAC-SHA1-96 suffix identifies a message authentication code; SHA-1 isn't collision-sensitive in this role. These enctypes are the current Kerberos standard (RFC 3962). Maximum ticket life matches `krb5.conf` (24h/7d).
 
 ### [`var/lib/krb5kdc/kadm5.acl`](var/lib/krb5kdc/kadm5.acl)
 
