@@ -138,6 +138,9 @@ umount "$MOUNT_DIR"
 rmdir "$MOUNT_DIR"
 
 echo ""
-echo "=== Deploy complete — rebooting ==="
+echo "=== Deploy complete — rebooting in 10s ==="
 echo "New root written to ${TARGET_LABEL} (${TARGET_DEV})"
-reboot
+# Schedule reboot via a detached systemd timer so this script can exit 0 cleanly
+# before the machine goes down. The runner records the step as succeeded; the
+# verify job in the workflow then polls for the offline→online transition.
+systemd-run --on-active=10 systemctl reboot

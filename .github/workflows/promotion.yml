@@ -119,7 +119,6 @@ jobs:
   flash:
     needs: [download]
     runs-on: [self-hosted, harbor-srv]
-    continue-on-error: true
     if: ${{ always() && needs.download.result == 'success' }}
     steps:
       - name: Flash server
