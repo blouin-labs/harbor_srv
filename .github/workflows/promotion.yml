@@ -134,9 +134,17 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ always() && needs.flash.result != 'cancelled' && needs.flash.result != 'skipped' }}
     steps:
+      - name: Generate token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.RUNNER_POLLER_APP_ID }}
+          private-key: ${{ secrets.RUNNER_POLLER_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - name: Wait for runner to reboot and reconnect
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           OFFLINE_TIMEOUT=90
           ONLINE_TIMEOUT=300
