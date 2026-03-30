@@ -138,9 +138,10 @@ umount "$MOUNT_DIR"
 rmdir "$MOUNT_DIR"
 
 echo ""
-echo "=== Deploy complete — rebooting in 5s ==="
+echo "=== Deploy complete — rebooting ==="
 echo "New root written to ${TARGET_LABEL} (${TARGET_DEV})"
-# Defer reboot so this script exits 0 before the machine goes down.
-# --no-block: return immediately (without it, systemd-run waits and the runner is killed mid-report).
-# --on-active=5: 5s for the runner to POST job status to GitHub (~1-3s in practice).
-systemd-run --no-block --on-active=5 /usr/bin/systemctl reboot
+# Reboot immediately. The runner (harbor-srv-docker) runs on the NAS and is not
+# affected by harbor-srv rebooting — it does not need time to report before the
+# host goes down. The previous 60s systemd-run timer was a workaround for the
+# bare-metal runner dying mid-job; that workaround is no longer needed.
+systemctl reboot

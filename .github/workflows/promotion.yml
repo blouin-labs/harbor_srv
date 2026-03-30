@@ -66,7 +66,7 @@ jobs:
 
   download:
     needs: [promote]
-    runs-on: [self-hosted, harbor-srv]
+    runs-on: [self-hosted, harbor-srv-docker]
     if: ${{ always() && (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
     steps:
       - name: Confirm
@@ -112,41 +112,36 @@ jobs:
             -H "Authorization: Bearer $GH_TOKEN" \
             -o /tmp/harbor-deploy/artifact.zip \
             "$ARTIFACT_URL"
-          bsdtar -xf /tmp/harbor-deploy/artifact.zip -C /tmp/harbor-deploy/
+          unzip -q /tmp/harbor-deploy/artifact.zip -d /tmp/harbor-deploy/
           rm /tmp/harbor-deploy/artifact.zip
 
-      - name: Stage image
-        run: mv /tmp/harbor-deploy/harbor_srv-root.img.zst /tmp/harbor_srv-root.img.zst
+      - name: Transfer image to harbor-srv
+        # SSH config in the runner container maps "harbor-srv" → gh-deploy@192.168.1.5.
+        # harbor-deploy.sh reads the image from /tmp/harbor_srv-root.img.zst.
+        run: scp /tmp/harbor-deploy/harbor_srv-root.img.zst harbor-srv:/tmp/harbor_srv-root.img.zst
 
   flash:
     needs: [download]
-    runs-on: [self-hosted, harbor-srv]
+    runs-on: [self-hosted, harbor-srv-docker]
     if: ${{ always() && needs.download.result == 'success' }}
     steps:
       - name: Flash server
         env:
-          # KRB5_SECRETS_B64 is picked up by sudo via env_keep in sudoers.d/runner.
-          # Do not use SETENV: or pass the variable inline (sudo VAR=val) — that
-          # form requires SETENV: which broadens the attack surface to all env vars.
+          # KRB5_SECRETS_B64 is forwarded via SSH SendEnv to the gh-deploy session.
+          # sshd on harbor-srv accepts it via AcceptEnv in 50-harbor-deploy.conf.
+          # gh-deploy's sudoers entry uses env_keep to pass it through to harbor-deploy.sh.
+          # Do not use SETENV: — that form broadens the attack surface to all env vars.
           KRB5_SECRETS_B64: ${{ secrets.KRB5_SECRETS_B64 }}
-        run: sudo /usr/local/sbin/harbor-deploy.sh
+        run: ssh -o SendEnv=KRB5_SECRETS_B64 harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
 
   verify:
     needs: [flash]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, harbor-srv-docker]
     if: ${{ always() && needs.flash.result != 'cancelled' && needs.flash.result != 'skipped' }}
     steps:
-      - name: Generate token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ vars.RUNNER_POLLER_APP_ID }}
-          private-key: ${{ secrets.RUNNER_POLLER_APP_KEY }}
-          owner: ${{ github.repository_owner }}
-
-      - name: Wait for runner to reboot and reconnect
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      - name: Wait for harbor-srv to reboot and come back online
+        # The runner (harbor-srv-docker) runs on the NAS and survives harbor-srv rebooting.
+        # Poll SSH connectivity instead of the runner API — no GitHub App token needed.
         run: |
           OFFLINE_TIMEOUT=90
           ONLINE_TIMEOUT=300
@@ -154,33 +149,30 @@ jobs:
 
           echo "Phase 1: waiting for harbor-srv to go offline (reboot started)..."
           elapsed=0
-          status=""
           while [ "$elapsed" -lt "$OFFLINE_TIMEOUT" ]; do
-            status=$(gh api "repos/${{ github.repository }}/actions/runners" \
-              --jq '.runners[] | select(.name == "harbor-srv") | .status')
-            [ "$status" = "offline" ] && break
-            echo "  status=${status:-not found}, elapsed=${elapsed}s"
+            ssh -o ConnectTimeout=3 -o BatchMode=yes harbor-srv exit 2>/dev/null \
+              || break
+            echo "  still reachable, elapsed=${elapsed}s"
             sleep "$POLL"
             elapsed=$((elapsed + POLL))
           done
-          if [ "$status" != "offline" ]; then
+          if ssh -o ConnectTimeout=3 -o BatchMode=yes harbor-srv exit 2>/dev/null; then
             echo "ERROR: harbor-srv never went offline — reboot may not have started" >&2
             exit 1
           fi
-          echo "Runner is offline. Waiting for it to come back..."
+          echo "harbor-srv is offline. Waiting for it to come back..."
 
           echo "Phase 2: waiting for harbor-srv to come back online..."
           elapsed=0
           while [ "$elapsed" -lt "$ONLINE_TIMEOUT" ]; do
-            status=$(gh api "repos/${{ github.repository }}/actions/runners" \
-              --jq '.runners[] | select(.name == "harbor-srv") | .status')
-            [ "$status" = "online" ] && break
-            echo "  status=${status}, elapsed=${elapsed}s"
+            ssh -o ConnectTimeout=5 -o BatchMode=yes harbor-srv exit 2>/dev/null \
+              && break
+            echo "  not yet reachable, elapsed=${elapsed}s"
             sleep "$POLL"
             elapsed=$((elapsed + POLL))
           done
-          if [ "$status" != "online" ]; then
+          if ! ssh -o ConnectTimeout=5 -o BatchMode=yes harbor-srv exit 2>/dev/null; then
             echo "ERROR: harbor-srv did not come back online within ${ONLINE_TIMEOUT}s" >&2
             exit 1
           fi
-          echo "Runner is back online — deploy succeeded."
+          echo "harbor-srv is back online — deploy succeeded."
