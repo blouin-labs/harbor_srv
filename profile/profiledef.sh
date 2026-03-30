@@ -20,6 +20,9 @@ file_permissions=(
   ["/usr/local/sbin/harbor-compose-ctl.sh"]="0:0:750"
   ["/etc/sudoers.d/runner"]="0:0:440"
   ["/var/lib/runner"]="968:968:700"
+  ["/var/lib/compose-deploy"]="966:966:700"
+  ["/var/lib/compose-deploy/.ssh"]="966:966:700"
+  ["/var/lib/compose-deploy/.ssh/authorized_keys"]="966:966:600"
   ["/var/lib/krb5kdc"]="0:0:700"
 )
 

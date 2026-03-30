@@ -47,8 +47,9 @@ systemd-resolve:x:974:
 systemd-timesync:x:973:
 tss:x:972:
 uuidd:x:971:
-docker:x:970:runner
+docker:x:970:runner,compose-deploy
 alpm:x:969:
 rpc:x:32:
 rpcuser:x:34:
 runner:x:968:
+compose-deploy:x:966:
