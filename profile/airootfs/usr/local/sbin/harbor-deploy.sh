@@ -138,12 +138,19 @@ umount "$MOUNT_DIR"
 rmdir "$MOUNT_DIR"
 
 echo ""
-echo "=== Deploy complete — rebooting in 60s ==="
+echo "=== Deploy complete — rebooting in 5s ==="
 echo "New root written to ${TARGET_LABEL} (${TARGET_DEV})"
-# Schedule reboot via a detached systemd timer so this script can exit 0 cleanly
-# before the machine goes down. The runner records the step as succeeded; the
-# verify job in the workflow then polls for the offline→online transition.
-# --no-block: return immediately after creating the timer unit (do not wait for it to fire).
-# --on-active=60: 60s gives the runner enough time to finish job cleanup and report
-# success to GitHub before the machine goes down.
-systemd-run --no-block --on-active=60 /usr/bin/systemctl reboot
+# Reboot via a detached transient systemd timer so this script can exit 0 cleanly.
+#
+# --no-block is required: without it, systemd-run blocks until the spawned unit
+# finishes (i.e. until the machine is down), so harbor-deploy never exits and the
+# runner is killed before it can report success to GitHub.
+#
+# --on-active=5 gives the runner ~5 s after this script exits to POST its job
+# status to the GitHub API. In practice the API call takes 1-3 s; 5 s is
+# conservative enough to be safe without burning wall-clock time. The original
+# value was 60 s — set when --no-block was first added and 10 s proved tight —
+# but 60 s was never measured, just guessed. The verify job's offline→online
+# poll is the authoritative success signal; this timer only needs to outlast
+# the runner's cleanup window.
+systemd-run --no-block --on-active=5 /usr/bin/systemctl reboot
