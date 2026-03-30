@@ -4,7 +4,7 @@
 # etc.) into the root process, enabling code injection via child processes.
 Defaults!/usr/local/sbin/harbor-deploy.sh env_keep+="KRB5_SECRETS_B64"
 runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-deploy.sh
-runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl rescan
-runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl update
-runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl stop
-runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl start
+runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl.sh rescan
+runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl.sh update
+runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl.sh stop
+runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl.sh start

@@ -6,8 +6,8 @@ Requires=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/local/bin/harbor-compose-up
-ExecStop=/usr/local/bin/harbor-compose-down
+ExecStart=/usr/local/bin/harbor-compose-up.sh
+ExecStop=/usr/local/bin/harbor-compose-down.sh
 
 [Install]
 WantedBy=multi-user.target

@@ -7,7 +7,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/local/bin/harbor-runner-bootstrap
+ExecStart=/usr/local/bin/harbor-runner-bootstrap.sh
 
 [Install]
 WantedBy=multi-user.target
