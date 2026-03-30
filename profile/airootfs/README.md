@@ -65,7 +65,7 @@ Drop-in for `docker.service` that adds a hard dependency on the NAS mount. Preve
 
 The server runs a local MIT Kerberos Key Distribution Center (KDC) with realm `HARBOR.LOCAL`. Running the KDC on the server itself avoids a chicken-and-egg dependency. The KDC starts from local storage before the NFS mount, so tickets are ready when the mount begins. The realm name `HARBOR.LOCAL` keeps this server-local realm separate from `jcb.local`. That leaves `jcb.local` free for a future Docker-based KDC covering broader lab services. The eventual goal is `sec=krb5i` on the NFS mount (mutual auth + integrity). See issue blouin-labs/issues#43.
 
-The KDC database and server keytab (`/etc/krb5.keytab`) are **secrets**. They're **not** present in this overlay—they're injected into the target partition by `harbor-deploy` at flash time from the `KRB5_SECRETS_B64` Actions secret. See `scripts/README.md` and the PR description for the one-time keytab generation steps.
+The KDC database and server keytab (`/etc/krb5.keytab`) are **secrets**. They're **not** present in this overlay—they're injected into the target partition by `harbor-deploy.sh` at flash time from the `KRB5_SECRETS_B64` Actions secret. See `scripts/README.md` and the PR description for the one-time keytab generation steps.
 
 ### [`etc/krb5.conf`](etc/krb5.conf)
 
@@ -111,7 +111,7 @@ On failure: reads the failing slot's PARTUUID from `/proc/cmdline`, loads `/new_
 
 The GitHub Actions self-hosted runner runs as a dedicated `runner` user (UID 968)—never as root. The runner user is a member of the `docker` group so workflows can use Docker. The bootstrap script runs as root (to download and set up the NFS directory) but switches to the `runner` user for registration via `runuser`.
 
-### [`usr/local/bin/harbor-runner-bootstrap`](usr/local/bin/harbor-runner-bootstrap)
+### [`usr/local/bin/harbor-runner-bootstrap.sh`](usr/local/bin/harbor-runner-bootstrap.sh)
 
 One-shot script that downloads and registers the GitHub Actions self-hosted runner on first boot. Idempotent: if the runner is already registered (`.runner` exists on the NFS share), exits immediately. Otherwise downloads the latest runner release to the NFS share, sets ownership to `runner:runner`, and registers using the token file as the `runner` user.
 
@@ -121,7 +121,7 @@ Registration deletes the token file—it's single-use and shouldn't persist on t
 
 ### [`etc/systemd/system/harbor-runner-bootstrap.service`](etc/systemd/system/harbor-runner-bootstrap.service)
 
-Runs `harbor-runner-bootstrap` as a one-shot service after the NFS mount comes up. Uses `RemainAfterExit=yes` so the service stays active after the script exits, letting `harbor-runner.service` depend on it correctly.
+Runs `harbor-runner-bootstrap.sh` as a one-shot service after the NFS mount comes up. Uses `RemainAfterExit=yes` so the service stays active after the script exits, letting `harbor-runner.service` depend on it correctly.
 
 ### [`etc/systemd/system/harbor-runner.service`](etc/systemd/system/harbor-runner.service)
 
