@@ -2,8 +2,8 @@
 # env_keep whitelists only this variable — SETENV: was avoided because it would
 # allow the runner to inject arbitrary variables (LD_PRELOAD, PATH, BASH_ENV,
 # etc.) into the root process, enabling code injection via child processes.
-Defaults!/usr/local/sbin/harbor-deploy env_keep+="KRB5_SECRETS_B64"
-runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-deploy
+Defaults!/usr/local/sbin/harbor-deploy.sh env_keep+="KRB5_SECRETS_B64"
+runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-deploy.sh
 runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl rescan
 runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl update
 runner ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl stop

@@ -53,13 +53,7 @@ jobs:
           pacman --noconfirm -Syu --needed shellcheck
 
       - name: Shellcheck
-        run: |
-          shellcheck profile/profiledef.sh
-          shellcheck scripts/build-image.sh
-          shellcheck scripts/install.sh
-          shellcheck scripts/deploy.sh
-          shellcheck profile/airootfs/usr/local/bin/harbor-runner-bootstrap
-          shellcheck profile/airootfs/usr/local/sbin/harbor-deploy
+        run: find . -name "*.sh" -exec shellcheck {} +
 
   actionlint:
     needs: changes
