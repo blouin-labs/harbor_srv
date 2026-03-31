@@ -136,43 +136,54 @@ jobs:
 
   verify:
     needs: [flash]
-    runs-on: [self-hosted, harbor-srv-docker]
+    runs-on: ubuntu-latest
     if: ${{ always() && needs.flash.result != 'cancelled' && needs.flash.result != 'skipped' }}
     steps:
-      - name: Wait for harbor-srv to reboot and come back online
-        # The runner (harbor-srv-docker) runs on the NAS and survives harbor-srv rebooting.
-        # Poll SSH connectivity instead of the runner API — no GitHub App token needed.
+      - name: Generate token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.RUNNER_POLLER_APP_ID }}
+          private-key: ${{ secrets.RUNNER_POLLER_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Wait for harbor-srv-docker to reboot and reconnect
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           OFFLINE_TIMEOUT=90
           ONLINE_TIMEOUT=300
           POLL=10
 
-          echo "Phase 1: waiting for harbor-srv to go offline (reboot started)..."
+          echo "Phase 1: waiting for harbor-srv-docker to go offline (reboot started)..."
           elapsed=0
+          status=""
           while [ "$elapsed" -lt "$OFFLINE_TIMEOUT" ]; do
-            ssh -o ConnectTimeout=3 -o BatchMode=yes harbor-srv exit 2>/dev/null \
-              || break
-            echo "  still reachable, elapsed=${elapsed}s"
+            status=$(gh api "repos/${{ github.repository }}/actions/runners" \
+              --jq '.runners[] | select(.name == "harbor-srv-docker") | .status')
+            [ "$status" = "offline" ] && break
+            echo "  status=${status:-not found}, elapsed=${elapsed}s"
             sleep "$POLL"
             elapsed=$((elapsed + POLL))
           done
-          if ssh -o ConnectTimeout=3 -o BatchMode=yes harbor-srv exit 2>/dev/null; then
-            echo "ERROR: harbor-srv never went offline — reboot may not have started" >&2
+          if [ "$status" != "offline" ]; then
+            echo "ERROR: harbor-srv-docker never went offline — reboot may not have started" >&2
             exit 1
           fi
-          echo "harbor-srv is offline. Waiting for it to come back..."
+          echo "Runner is offline. Waiting for it to come back..."
 
-          echo "Phase 2: waiting for harbor-srv to come back online..."
+          echo "Phase 2: waiting for harbor-srv-docker to come back online..."
           elapsed=0
           while [ "$elapsed" -lt "$ONLINE_TIMEOUT" ]; do
-            ssh -o ConnectTimeout=5 -o BatchMode=yes harbor-srv exit 2>/dev/null \
-              && break
-            echo "  not yet reachable, elapsed=${elapsed}s"
+            status=$(gh api "repos/${{ github.repository }}/actions/runners" \
+              --jq '.runners[] | select(.name == "harbor-srv-docker") | .status')
+            [ "$status" = "online" ] && break
+            echo "  status=${status}, elapsed=${elapsed}s"
             sleep "$POLL"
             elapsed=$((elapsed + POLL))
           done
-          if ! ssh -o ConnectTimeout=5 -o BatchMode=yes harbor-srv exit 2>/dev/null; then
-            echo "ERROR: harbor-srv did not come back online within ${ONLINE_TIMEOUT}s" >&2
+          if [ "$status" != "online" ]; then
+            echo "ERROR: harbor-srv-docker did not come back online within ${ONLINE_TIMEOUT}s" >&2
             exit 1
           fi
-          echo "harbor-srv is back online — deploy succeeded."
+          echo "Runner is back online — deploy succeeded."
