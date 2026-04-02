@@ -1,0 +1,14 @@
+[Unit]
+Description=GitHub Actions Docker runner (harbor-srv-docker)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=docker compose -f /etc/harbor-runner/compose.yaml up -d
+ExecStop=docker compose -f /etc/harbor-runner/compose.yaml down
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,45 @@
+---
+# harbor-runner — DinD GitHub Actions runner for the harbor-srv-docker label.
+# Managed by harbor-runner.service; secrets injected via harbor-deploy at deploy time.
+name: harbor-runner
+
+services:
+  runner:
+    image: ghcr.io/blouin-labs/harbor-runner:latest
+    container_name: harbor-runner
+    restart: unless-stopped
+    privileged: true
+    # Explicit DNS: the host resolv.conf is empty (systemd-resolved stub), so Docker's
+    # embedded DNS for custom bridge networks has no upstream to forward to.
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      - ACTIONS_RUNNER_INPUT_URL
+      - ACTIONS_RUNNER_INPUT_NAME=${ACTIONS_RUNNER_INPUT_NAME:-harbor-srv-docker}
+      - ACTIONS_RUNNER_INPUT_LABELS=${ACTIONS_RUNNER_INPUT_LABELS:-harbor-srv-docker}
+      - GH_DEPLOY_SSH_KEY_B64
+      - RUNNER_CREDS_B64
+    volumes:
+      - work:/home/runner/_work
+      - docker-data:/var/lib/docker
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: "4.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - runner-net
+
+networks:
+  runner-net:
+    driver: bridge
+
+volumes:
+  work:
+  docker-data:
