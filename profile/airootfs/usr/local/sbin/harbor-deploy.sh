@@ -109,6 +109,18 @@ else
     echo "WARNING: KRB5_SECRETS_B64 not set — Kerberos will not be functional" >&2
 fi
 
+# --- Inject harbor-runner secrets ---
+if [ -n "${RUNNER_ENV_B64:-}" ]; then
+    echo ":: Injecting runner secrets..."
+    mkdir -p "${MOUNT_DIR}/etc/harbor-runner"
+    printf '%s' "$RUNNER_ENV_B64" | base64 -d > "${MOUNT_DIR}/etc/harbor-runner/.env"
+    chmod 600 "${MOUNT_DIR}/etc/harbor-runner/.env"
+    unset RUNNER_ENV_B64
+    echo ":: Runner secrets injected."
+else
+    echo "WARNING: RUNNER_ENV_B64 not set — harbor-runner will not start after reboot" >&2
+fi
+
 ESP_MOUNT=$(findmnt -n -o TARGET /boot/efi 2>/dev/null || echo "")
 if [ -z "$ESP_MOUNT" ]; then
     mkdir -p /boot/efi
