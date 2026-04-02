@@ -136,6 +136,7 @@ arch-chroot "${WORK_DIR}/mnt" systemctl enable \
     docker \
     mnt-synology-harbor_srv.mount \
     systemd-bless-boot.service \
+    harbor-runner.service \
     harbor-compose.service \
     krb5-kdc.service \
     rpc-gssd.service
