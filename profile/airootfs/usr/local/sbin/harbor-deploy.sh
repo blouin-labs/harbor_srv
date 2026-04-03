@@ -15,11 +15,11 @@ MOUNT_DIR=""
 SECRETS_DIR="/var/lib/harbor-deploy"
 
 # Read secrets staged by the CI runner and delete them immediately.
-KRB5_SECRETS_B64=$(   [ -f "${SECRETS_DIR}/krb5-secrets.b64"   ] && cat "${SECRETS_DIR}/krb5-secrets.b64"   || true)
-RUNNER_REG_APP_KEY=$( [ -f "${SECRETS_DIR}/runner-reg-key.pem" ] && cat "${SECRETS_DIR}/runner-reg-key.pem" || true)
-RUNNER_REG_APP_ID=$(  [ -f "${SECRETS_DIR}/runner-reg-app-id"  ] && cat "${SECRETS_DIR}/runner-reg-app-id"  || true)
-GH_DEPLOY_SSH_KEY=$(  [ -f "${SECRETS_DIR}/gh-deploy-key"      ] && cat "${SECRETS_DIR}/gh-deploy-key"      || true)
-GHIO_PULLER_PAT=$(    [ -f "${SECRETS_DIR}/ghio-puller-pat"    ] && cat "${SECRETS_DIR}/ghio-puller-pat"    || true)
+KRB5_SECRETS_B64=""   ; if [ -f "${SECRETS_DIR}/krb5-secrets.b64"   ]; then KRB5_SECRETS_B64=$(   cat "${SECRETS_DIR}/krb5-secrets.b64");   fi
+RUNNER_REG_APP_KEY="" ; if [ -f "${SECRETS_DIR}/runner-reg-key.pem" ]; then RUNNER_REG_APP_KEY=$( cat "${SECRETS_DIR}/runner-reg-key.pem"); fi
+RUNNER_REG_APP_ID=""  ; if [ -f "${SECRETS_DIR}/runner-reg-app-id"  ]; then RUNNER_REG_APP_ID=$(  cat "${SECRETS_DIR}/runner-reg-app-id");  fi
+GH_DEPLOY_SSH_KEY=""  ; if [ -f "${SECRETS_DIR}/gh-deploy-key"      ]; then GH_DEPLOY_SSH_KEY=$(  cat "${SECRETS_DIR}/gh-deploy-key");      fi
+GHIO_PULLER_PAT=""    ; if [ -f "${SECRETS_DIR}/ghio-puller-pat"    ]; then GHIO_PULLER_PAT=$(    cat "${SECRETS_DIR}/ghio-puller-pat");    fi
 rm -rf "$SECRETS_DIR"
 
 cleanup() {
