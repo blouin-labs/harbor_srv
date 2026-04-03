@@ -134,7 +134,7 @@ jobs:
           GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
           GHIO_PULLER_PAT: ${{ secrets.GHIO_PULLER_PAT }}
         run: |
-          ssh harbor-srv 'mkdir -p /var/lib/harbor-deploy && chmod 700 /var/lib/harbor-deploy'
+          ssh harbor-srv 'umask 077; mkdir -p /var/lib/harbor-deploy'
           printf '%s' "$KRB5_SECRETS_B64"   | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/krb5-secrets.b64'
           printf '%s' "$RUNNER_REG_APP_KEY" | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/runner-reg-key.pem'
           printf '%s' "$RUNNER_REG_APP_ID"  | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/runner-reg-app-id'
