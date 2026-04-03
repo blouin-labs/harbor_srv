@@ -49,6 +49,13 @@ echo ":: Creating ${ROOT_SIZE} raw image..."
 truncate -s "$ROOT_SIZE" "${WORK_DIR}/${IMAGE_NAME}"
 mkfs.ext4 -F -L harbor_root "${WORK_DIR}/${IMAGE_NAME}"
 
+# In containerized builds, /dev/loop* nodes may not be pre-populated.
+# Create any missing ones so losetup --find can use them.
+for _i in $(seq 0 7); do
+    [ -e "/dev/loop${_i}" ] || mknod -m 660 "/dev/loop${_i}" b 7 "${_i}"
+done
+unset _i
+
 LOOP_DEV=$(losetup --find --show "${WORK_DIR}/${IMAGE_NAME}")
 echo ":: Loop device: ${LOOP_DEV}"
 mount "$LOOP_DEV" "${WORK_DIR}/mnt"
