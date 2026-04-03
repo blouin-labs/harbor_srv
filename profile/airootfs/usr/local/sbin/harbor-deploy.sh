@@ -109,16 +109,40 @@ else
     echo "WARNING: KRB5_SECRETS_B64 not set — Kerberos will not be functional" >&2
 fi
 
-# --- Inject harbor-runner secrets ---
-if [ -n "${RUNNER_ENV_B64:-}" ]; then
-    echo ":: Injecting runner secrets..."
+# --- Inject runner registration GitHub App private key ---
+if [ -n "${RUNNER_REG_APP_KEY:-}" ]; then
+    echo ":: Injecting runner registration App private key..."
     mkdir -p "${MOUNT_DIR}/etc/harbor-runner"
-    printf '%s' "$RUNNER_ENV_B64" | base64 -d > "${MOUNT_DIR}/etc/harbor-runner/.env"
-    chmod 600 "${MOUNT_DIR}/etc/harbor-runner/.env"
-    unset RUNNER_ENV_B64
-    echo ":: Runner secrets injected."
+    printf '%s' "$RUNNER_REG_APP_KEY" > "${MOUNT_DIR}/etc/harbor-runner/runner-reg-key.pem"
+    chmod 600 "${MOUNT_DIR}/etc/harbor-runner/runner-reg-key.pem"
+    unset RUNNER_REG_APP_KEY
+    echo ":: Runner registration App private key injected."
 else
-    echo "WARNING: RUNNER_ENV_B64 not set — harbor-runner will not start after reboot" >&2
+    echo "WARNING: RUNNER_REG_APP_KEY not set — harbor-runner cannot self-register" >&2
+fi
+
+# --- Inject gh-deploy SSH private key ---
+if [ -n "${GH_DEPLOY_SSH_KEY:-}" ]; then
+    echo ":: Injecting gh-deploy SSH private key..."
+    mkdir -p "${MOUNT_DIR}/etc/harbor-runner"
+    printf '%s' "$GH_DEPLOY_SSH_KEY" > "${MOUNT_DIR}/etc/harbor-runner/gh-deploy-key"
+    chmod 600 "${MOUNT_DIR}/etc/harbor-runner/gh-deploy-key"
+    unset GH_DEPLOY_SSH_KEY
+    echo ":: gh-deploy SSH private key injected."
+else
+    echo "WARNING: GH_DEPLOY_SSH_KEY not set — CI deploy jobs will fail" >&2
+fi
+
+# --- Write harbor-runner .env (non-secret runner config) ---
+if [ -n "${RUNNER_REG_APP_ID:-}" ]; then
+    echo ":: Writing harbor-runner .env..."
+    mkdir -p "${MOUNT_DIR}/etc/harbor-runner"
+    printf 'ACTIONS_RUNNER_INPUT_URL=https://github.com/blouin-labs\nRUNNER_REG_APP_ID=%s\n' \
+        "$RUNNER_REG_APP_ID" > "${MOUNT_DIR}/etc/harbor-runner/.env"
+    chmod 600 "${MOUNT_DIR}/etc/harbor-runner/.env"
+    echo ":: harbor-runner .env written."
+else
+    echo "WARNING: RUNNER_REG_APP_ID not set — harbor-runner .env will be missing" >&2
 fi
 
 # --- Inject ghio-puller private key ---
