@@ -134,7 +134,8 @@ jobs:
           # arbitrary variables into the root process.
           KRB5_SECRETS_B64: ${{ secrets.KRB5_SECRETS_B64 }}
           RUNNER_ENV_B64: ${{ secrets.RUNNER_ENV_B64 }}
-        run: ssh -o SendEnv=KRB5_SECRETS_B64 -o SendEnv=RUNNER_ENV_B64 harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
+          GHIO_PULLER_KEY: ${{ secrets.GHIO_PULLER_KEY }}
+        run: ssh -o SendEnv=KRB5_SECRETS_B64 -o SendEnv=RUNNER_ENV_B64 -o SendEnv=GHIO_PULLER_KEY harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
 
   verify:
     needs: [flash]
