@@ -17,5 +17,5 @@ if [ ! -f "$PAT_FILE" ]; then
     exit 1
 fi
 
-cat "$PAT_FILE" | docker login ghcr.io -u x-access-token --password-stdin
+docker login ghcr.io -u x-access-token --password-stdin < "$PAT_FILE"
 echo "ghio-puller-login: authenticated with ghcr.io"
