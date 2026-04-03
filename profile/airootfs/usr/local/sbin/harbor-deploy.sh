@@ -12,6 +12,15 @@ set -euo pipefail
 IMAGE="/tmp/harbor_srv-root.img.zst"
 
 MOUNT_DIR=""
+SECRETS_DIR="/var/lib/harbor-deploy"
+
+# Read secrets staged by the CI runner and delete them immediately.
+KRB5_SECRETS_B64=$(   [ -f "${SECRETS_DIR}/krb5-secrets.b64"   ] && cat "${SECRETS_DIR}/krb5-secrets.b64"   || true)
+RUNNER_REG_APP_KEY=$( [ -f "${SECRETS_DIR}/runner-reg-key.pem" ] && cat "${SECRETS_DIR}/runner-reg-key.pem" || true)
+RUNNER_REG_APP_ID=$(  [ -f "${SECRETS_DIR}/runner-reg-app-id"  ] && cat "${SECRETS_DIR}/runner-reg-app-id"  || true)
+GH_DEPLOY_SSH_KEY=$(  [ -f "${SECRETS_DIR}/gh-deploy-key"      ] && cat "${SECRETS_DIR}/gh-deploy-key"      || true)
+GHIO_PULLER_PAT=$(    [ -f "${SECRETS_DIR}/ghio-puller-pat"    ] && cat "${SECRETS_DIR}/ghio-puller-pat"    || true)
+rm -rf "$SECRETS_DIR"
 
 cleanup() {
     if [ -n "$MOUNT_DIR" ] && mountpoint -q "$MOUNT_DIR" 2>/dev/null; then

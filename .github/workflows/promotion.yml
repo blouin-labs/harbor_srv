@@ -126,18 +126,23 @@ jobs:
     runs-on: [self-hosted, harbor-srv-docker]
     if: ${{ always() && needs.download.result == 'success' }}
     steps:
-      - name: Flash server
+      - name: Stage secrets
         env:
-          # Secrets forwarded via SSH SendEnv; sshd accepts them via AcceptEnv in
-          # 50-harbor-deploy.conf and sudoers passes them through via env_keep.
-          # SETENV: is intentionally avoided — it would allow the runner to inject
-          # arbitrary variables into the root process.
           KRB5_SECRETS_B64: ${{ secrets.KRB5_SECRETS_B64 }}
           RUNNER_REG_APP_KEY: ${{ secrets.RUNNER_REG_APP_KEY }}
           RUNNER_REG_APP_ID: ${{ vars.RUNNER_REG_APP_ID }}
           GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
           GHIO_PULLER_PAT: ${{ secrets.GHIO_PULLER_PAT }}
-        run: ssh -o SendEnv=KRB5_SECRETS_B64 -o SendEnv=RUNNER_REG_APP_KEY -o SendEnv=RUNNER_REG_APP_ID -o SendEnv=GH_DEPLOY_SSH_KEY -o SendEnv=GHIO_PULLER_PAT harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
+        run: |
+          ssh harbor-srv 'mkdir -p /var/lib/harbor-deploy && chmod 700 /var/lib/harbor-deploy'
+          printf '%s' "$KRB5_SECRETS_B64"   | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/krb5-secrets.b64'
+          printf '%s' "$RUNNER_REG_APP_KEY" | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/runner-reg-key.pem'
+          printf '%s' "$RUNNER_REG_APP_ID"  | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/runner-reg-app-id'
+          printf '%s' "$GH_DEPLOY_SSH_KEY"  | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/gh-deploy-key'
+          printf '%s' "$GHIO_PULLER_PAT"    | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/ghio-puller-pat'
+
+      - name: Flash server
+        run: ssh harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
 
   verify:
     needs: [flash]
