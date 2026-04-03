@@ -121,6 +121,19 @@ else
     echo "WARNING: RUNNER_ENV_B64 not set — harbor-runner will not start after reboot" >&2
 fi
 
+# --- Inject ghio-puller private key ---
+if [ -n "${GHIO_PULLER_KEY:-}" ]; then
+    echo ":: Injecting ghio-puller private key..."
+    mkdir -p "${MOUNT_DIR}/etc/ghio-puller"
+    chmod 700 "${MOUNT_DIR}/etc/ghio-puller"
+    printf '%s' "$GHIO_PULLER_KEY" > "${MOUNT_DIR}/etc/ghio-puller/private-key.pem"
+    chmod 600 "${MOUNT_DIR}/etc/ghio-puller/private-key.pem"
+    unset GHIO_PULLER_KEY
+    echo ":: ghio-puller private key injected."
+else
+    echo "WARNING: GHIO_PULLER_KEY not set — ghcr.io docker login will fail on boot" >&2
+fi
+
 ESP_MOUNT=$(findmnt -n -o TARGET /boot/efi 2>/dev/null || echo "")
 if [ -z "$ESP_MOUNT" ]; then
     mkdir -p /boot/efi

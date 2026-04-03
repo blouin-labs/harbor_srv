@@ -1,0 +1,11 @@
+[Unit]
+Description=Authenticate Docker with ghcr.io via GitHub App token
+Before=harbor-runner.service
+After=network-online.target docker.service
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/ghio-puller-login.sh
