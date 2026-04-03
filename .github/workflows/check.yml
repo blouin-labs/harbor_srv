@@ -36,9 +36,9 @@ jobs:
   shellcheck:
     needs: changes
     if: ${{ needs.changes.outputs.scripts == 'true' }}
-    # harbor-srv-docker (DinD) cannot start nested containers due to /proc mount
-    # restrictions — forced to wsl-docker-runner until blouin-labs/issues#63 is resolved.
-    runs-on: [self-hosted, wsl-docker-runner]
+    # Runs in a container: job (no nested Docker needed), so any self-hosted runner works.
+    # See blouin-labs/issues#63 for the DinD /proc restriction context.
+    runs-on: [self-hosted]
     container:
       image: ubuntu:latest
     steps:
