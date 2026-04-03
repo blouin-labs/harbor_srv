@@ -14,10 +14,10 @@ ACTION="${1:-}"
 
 case "${ACTION}" in
     rescan)
-        exec /usr/local/bin/harbor-compose-up
+        exec /usr/local/bin/harbor-compose-up.sh
         ;;
     update)
-        exec /usr/local/bin/harbor-compose-update
+        exec /usr/local/bin/harbor-compose-update.sh
         ;;
     stop)
         exec systemctl stop harbor-compose.service
