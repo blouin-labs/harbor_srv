@@ -17,11 +17,12 @@ services:
       - ACTIONS_RUNNER_INPUT_URL
       - ACTIONS_RUNNER_INPUT_NAME=${ACTIONS_RUNNER_INPUT_NAME:-harbor-srv-docker}
       - ACTIONS_RUNNER_INPUT_LABELS=${ACTIONS_RUNNER_INPUT_LABELS:-harbor-srv-docker}
-      - GH_DEPLOY_SSH_KEY_B64
-      - RUNNER_CREDS_B64
+      - RUNNER_REG_APP_ID
     volumes:
       - work:/home/runner/_work
       - docker-data:/var/lib/docker
+      - /etc/harbor-runner/runner-reg-key.pem:/run/secrets/runner-reg-key.pem:ro
+      - /etc/harbor-runner/gh-deploy-key:/run/secrets/gh-deploy-key:ro
     deploy:
       resources:
         limits:

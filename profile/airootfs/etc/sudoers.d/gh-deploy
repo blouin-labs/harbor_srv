@@ -1,7 +1,7 @@
 # Whitelist only the secrets harbor-deploy.sh needs — SETENV: was avoided because
 # it would allow the runner to inject arbitrary variables (LD_PRELOAD, PATH, etc.)
 # into the root process, enabling code injection via child processes.
-Defaults!/usr/local/sbin/harbor-deploy.sh env_keep+="KRB5_SECRETS_B64 RUNNER_ENV_B64 GHIO_PULLER_KEY"
+Defaults!/usr/local/sbin/harbor-deploy.sh env_keep+="KRB5_SECRETS_B64 RUNNER_REG_APP_KEY RUNNER_REG_APP_ID GH_DEPLOY_SSH_KEY GHIO_PULLER_KEY"
 gh-deploy ALL=(root) NOPASSWD: /usr/local/sbin/harbor-deploy.sh
 gh-deploy ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl.sh rescan
 gh-deploy ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl.sh update

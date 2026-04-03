@@ -133,9 +133,11 @@ jobs:
           # SETENV: is intentionally avoided — it would allow the runner to inject
           # arbitrary variables into the root process.
           KRB5_SECRETS_B64: ${{ secrets.KRB5_SECRETS_B64 }}
-          RUNNER_ENV_B64: ${{ secrets.RUNNER_ENV_B64 }}
+          RUNNER_REG_APP_KEY: ${{ secrets.RUNNER_REG_APP_KEY }}
+          RUNNER_REG_APP_ID: ${{ vars.RUNNER_REG_APP_ID }}
+          GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
           GHIO_PULLER_KEY: ${{ secrets.GHIO_PULLER_KEY }}
-        run: ssh -o SendEnv=KRB5_SECRETS_B64 -o SendEnv=RUNNER_ENV_B64 -o SendEnv=GHIO_PULLER_KEY harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
+        run: ssh -o SendEnv=KRB5_SECRETS_B64 -o SendEnv=RUNNER_REG_APP_KEY -o SendEnv=RUNNER_REG_APP_ID -o SendEnv=GH_DEPLOY_SSH_KEY -o SendEnv=GHIO_PULLER_KEY harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
 
   verify:
     needs: [flash]
