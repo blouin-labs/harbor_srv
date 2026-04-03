@@ -7,7 +7,6 @@ services:
   runner:
     image: ghcr.io/blouin-labs/harbor-runner:latest
     container_name: harbor-runner
-    restart: unless-stopped
     privileged: true
     # Explicit DNS: the host resolv.conf is empty (systemd-resolved stub), so Docker's
     # embedded DNS for custom bridge networks has no upstream to forward to.

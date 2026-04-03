@@ -33,24 +33,19 @@ jobs:
               - '**.md'
               - '.vale.ini'
 
-  select-runner:
-    uses: ./.github/workflows/select-runner.yml
-    secrets: inherit
-
   shellcheck:
-    needs: [changes, select-runner]
+    needs: changes
     if: ${{ needs.changes.outputs.scripts == 'true' }}
-    runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
+    # harbor-srv-docker (DinD) cannot start nested containers due to /proc mount
+    # restrictions — forced to wsl-docker-runner until blouin-labs/issues#63 is resolved.
+    runs-on: [self-hosted, wsl-docker-runner]
     container:
-      # archlinux/archlinux:latest — pinned digest matches ARCH_SNAPSHOT in build.yml
-      image: archlinux/archlinux@sha256:0e2b66488c60a96c65041cde5e754957a880b760dd4f00865ed09c131a51cd44
+      image: ubuntu:latest
     steps:
       - uses: actions/checkout@v5
 
       - name: Install shellcheck
-        run: |
-          pacman -Sy --needed --noconfirm archlinux-keyring
-          pacman --noconfirm -Syu --needed shellcheck
+        run: apt-get update -qq && apt-get install -y shellcheck
 
       - name: Shellcheck
         run: find . -name "*.sh" -exec shellcheck {} +
