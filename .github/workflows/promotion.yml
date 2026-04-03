@@ -136,8 +136,8 @@ jobs:
           RUNNER_REG_APP_KEY: ${{ secrets.RUNNER_REG_APP_KEY }}
           RUNNER_REG_APP_ID: ${{ vars.RUNNER_REG_APP_ID }}
           GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
-          GHIO_PULLER_KEY: ${{ secrets.GHIO_PULLER_KEY }}
-        run: ssh -o SendEnv=KRB5_SECRETS_B64 -o SendEnv=RUNNER_REG_APP_KEY -o SendEnv=RUNNER_REG_APP_ID -o SendEnv=GH_DEPLOY_SSH_KEY -o SendEnv=GHIO_PULLER_KEY harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
+          GHIO_PULLER_PAT: ${{ secrets.GHIO_PULLER_PAT }}
+        run: ssh -o SendEnv=KRB5_SECRETS_B64 -o SendEnv=RUNNER_REG_APP_KEY -o SendEnv=RUNNER_REG_APP_ID -o SendEnv=GH_DEPLOY_SSH_KEY -o SendEnv=GHIO_PULLER_PAT harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
 
   verify:
     needs: [flash]
