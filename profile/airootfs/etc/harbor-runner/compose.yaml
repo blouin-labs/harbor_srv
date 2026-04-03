@@ -5,7 +5,7 @@ name: harbor-runner
 
 services:
   runner:
-    image: ghcr.io/blouin-labs/harbor-runner:latest
+    image: ghcr.io/blouin-labs/dind-runner:latest
     container_name: harbor-runner
     privileged: true
     # Explicit DNS: the host resolv.conf is empty (systemd-resolved stub), so Docker's

@@ -145,17 +145,18 @@ else
     echo "WARNING: RUNNER_REG_APP_ID not set — harbor-runner .env will be missing" >&2
 fi
 
-# --- Inject ghio-puller private key ---
-if [ -n "${GHIO_PULLER_KEY:-}" ]; then
-    echo ":: Injecting ghio-puller private key..."
+# --- Inject ghio-puller PAT for ghcr.io authentication ---
+# Note: GitHub App tokens don't work for GHCR pulls (blouin-labs/issues#72).
+if [ -n "${GHIO_PULLER_PAT:-}" ]; then
+    echo ":: Injecting ghio-puller PAT..."
     mkdir -p "${MOUNT_DIR}/etc/ghio-puller"
     chmod 700 "${MOUNT_DIR}/etc/ghio-puller"
-    printf '%s' "$GHIO_PULLER_KEY" > "${MOUNT_DIR}/etc/ghio-puller/private-key.pem"
-    chmod 600 "${MOUNT_DIR}/etc/ghio-puller/private-key.pem"
-    unset GHIO_PULLER_KEY
-    echo ":: ghio-puller private key injected."
+    printf '%s' "$GHIO_PULLER_PAT" > "${MOUNT_DIR}/etc/ghio-puller/pat"
+    chmod 600 "${MOUNT_DIR}/etc/ghio-puller/pat"
+    unset GHIO_PULLER_PAT
+    echo ":: ghio-puller PAT injected."
 else
-    echo "WARNING: GHIO_PULLER_KEY not set — ghcr.io docker login will fail on boot" >&2
+    echo "WARNING: GHIO_PULLER_PAT not set — ghcr.io docker login will fail on boot" >&2
 fi
 
 ESP_MOUNT=$(findmnt -n -o TARGET /boot/efi 2>/dev/null || echo "")
