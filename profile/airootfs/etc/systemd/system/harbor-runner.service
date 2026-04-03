@@ -1,7 +1,7 @@
 [Unit]
 Description=GitHub Actions Docker runner (harbor-srv-docker)
-After=docker.service network-online.target
-Requires=docker.service
+After=docker.service network-online.target ghio-puller-login.service
+Requires=docker.service ghio-puller-login.service
 Wants=network-online.target
 
 [Service]
