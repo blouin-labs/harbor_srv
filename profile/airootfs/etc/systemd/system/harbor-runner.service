@@ -5,10 +5,11 @@ Requires=docker.service
 Wants=network-online.target
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=docker compose -f /etc/harbor-runner/compose.yaml up -d
+Type=exec
+ExecStart=docker compose -f /etc/harbor-runner/compose.yaml up --remove-orphans
 ExecStop=docker compose -f /etc/harbor-runner/compose.yaml down
+Restart=on-failure
+RestartSec=30
 
 [Install]
 WantedBy=multi-user.target
