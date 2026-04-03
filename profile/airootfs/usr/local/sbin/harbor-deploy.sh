@@ -17,7 +17,7 @@ cleanup() {
     if [ -n "$MOUNT_DIR" ] && mountpoint -q "$MOUNT_DIR" 2>/dev/null; then
         umount -R "$MOUNT_DIR" 2>/dev/null || true
     fi
-    [ -n "$MOUNT_DIR" ] && rmdir "$MOUNT_DIR" 2>/dev/null || true
+    if [ -n "$MOUNT_DIR" ]; then rmdir "$MOUNT_DIR" 2>/dev/null || true; fi
 }
 trap cleanup EXIT
 
