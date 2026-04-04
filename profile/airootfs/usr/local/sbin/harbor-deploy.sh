@@ -12,7 +12,7 @@ set -euo pipefail
 IMAGE="/tmp/harbor_srv-root.img.zst"
 
 MOUNT_DIR=""
-SECRETS_DIR="/var/lib/harbor-deploy"
+SECRETS_DIR="/var/lib/gh-deploy/harbor-deploy"
 
 # Read secrets staged by the CI runner and delete them immediately.
 KRB5_SECRETS_B64=""   ; if [ -f "${SECRETS_DIR}/krb5-secrets.b64"   ]; then KRB5_SECRETS_B64=$(   cat "${SECRETS_DIR}/krb5-secrets.b64");   fi

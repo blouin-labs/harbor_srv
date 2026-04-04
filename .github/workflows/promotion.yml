@@ -134,12 +134,12 @@ jobs:
           GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
           GHIO_PULLER_PAT: ${{ secrets.GHIO_PULLER_PAT }}
         run: |
-          ssh harbor-srv 'umask 077; mkdir -p /var/lib/harbor-deploy'
-          printf '%s' "$KRB5_SECRETS_B64"   | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/krb5-secrets.b64'
-          printf '%s' "$RUNNER_REG_APP_KEY" | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/runner-reg-key.pem'
-          printf '%s' "$RUNNER_REG_APP_ID"  | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/runner-reg-app-id'
-          printf '%s' "$GH_DEPLOY_SSH_KEY"  | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/gh-deploy-key'
-          printf '%s' "$GHIO_PULLER_PAT"    | ssh harbor-srv 'umask 077; cat > /var/lib/harbor-deploy/ghio-puller-pat'
+          ssh harbor-srv 'umask 077; mkdir -p /var/lib/gh-deploy/harbor-deploy'
+          printf '%s' "$KRB5_SECRETS_B64"   | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/krb5-secrets.b64'
+          printf '%s' "$RUNNER_REG_APP_KEY" | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-key.pem'
+          printf '%s' "$RUNNER_REG_APP_ID"  | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-app-id'
+          printf '%s' "$GH_DEPLOY_SSH_KEY"  | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/gh-deploy-key'
+          printf '%s' "$GHIO_PULLER_PAT"    | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/ghio-puller-pat'
 
       - name: Flash server
         run: ssh harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
