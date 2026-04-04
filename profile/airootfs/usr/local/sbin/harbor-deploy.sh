@@ -203,3 +203,4 @@ echo "New root written to ${TARGET_LABEL} (${TARGET_DEV})"
 # --no-block: return immediately (without it, systemd-run waits and the runner is killed mid-report).
 # --on-active=5: 5s for the runner to POST job status to GitHub (~1-3s in practice).
 systemd-run --no-block --on-active=5 /usr/bin/systemctl reboot
+
