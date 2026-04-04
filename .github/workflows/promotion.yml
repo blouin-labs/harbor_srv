@@ -175,7 +175,7 @@ jobs:
 
           echo "Polling HARBOR_BOOT_LAST for run ${RUN_ID}..."
           RESULT=""
-          for i in $(seq 1 120); do
+          for _ in $(seq 1 120); do
             RESULT=$(gh api \
               "repos/${{ github.repository }}/actions/variables/HARBOR_BOOT_LAST" \
               --jq '.value' 2>/dev/null || echo "")
