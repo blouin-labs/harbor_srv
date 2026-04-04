@@ -20,6 +20,9 @@ RUNNER_REG_APP_KEY="" ; if [ -f "${SECRETS_DIR}/runner-reg-key.pem" ]; then RUNN
 RUNNER_REG_APP_ID=""  ; if [ -f "${SECRETS_DIR}/runner-reg-app-id"  ]; then RUNNER_REG_APP_ID=$(  cat "${SECRETS_DIR}/runner-reg-app-id");  fi
 GH_DEPLOY_SSH_KEY=""  ; if [ -f "${SECRETS_DIR}/gh-deploy-key"      ]; then GH_DEPLOY_SSH_KEY=$(  cat "${SECRETS_DIR}/gh-deploy-key");      fi
 GHIO_PULLER_PAT=""    ; if [ -f "${SECRETS_DIR}/ghio-puller-pat"    ]; then GHIO_PULLER_PAT=$(    cat "${SECRETS_DIR}/ghio-puller-pat");    fi
+DEPLOY_RUN_ID=""      ; if [ -f "${SECRETS_DIR}/run-id"             ]; then DEPLOY_RUN_ID=$(      cat "${SECRETS_DIR}/run-id");             fi
+HARBOR_BOOT_APP_KEY=""; if [ -f "${SECRETS_DIR}/boot-app-key"       ]; then HARBOR_BOOT_APP_KEY=$(cat "${SECRETS_DIR}/boot-app-key");       fi
+HARBOR_BOOT_APP_ID="" ; if [ -f "${SECRETS_DIR}/boot-app-id"        ]; then HARBOR_BOOT_APP_ID=$( cat "${SECRETS_DIR}/boot-app-id");        fi
 rm -rf "$SECRETS_DIR"
 
 cleanup() {
@@ -180,6 +183,22 @@ if [ -n "${GHIO_PULLER_PAT:-}" ]; then
     echo ":: ghio-puller PAT injected."
 else
     echo "WARNING: GHIO_PULLER_PAT not set — ghcr.io docker login will fail on boot" >&2
+fi
+
+# --- Inject post-boot verification context and harbor-boot-reporter App credentials ---
+if [ -n "${DEPLOY_RUN_ID:-}" ]; then
+    echo ":: Writing post-boot verification context..."
+    printf '%s' "$DEPLOY_RUN_ID" > "${MOUNT_DIR}/etc/harbor/last-deploy-context"
+    chmod 600 "${MOUNT_DIR}/etc/harbor/last-deploy-context"
+fi
+
+if [ -n "${HARBOR_BOOT_APP_KEY:-}" ] && [ -n "${HARBOR_BOOT_APP_ID:-}" ]; then
+    echo ":: Injecting harbor-boot-reporter App credentials..."
+    printf '%s\n' "$HARBOR_BOOT_APP_KEY" > "${MOUNT_DIR}/etc/harbor/boot-app-key"
+    chmod 600 "${MOUNT_DIR}/etc/harbor/boot-app-key"
+    printf '%s'  "$HARBOR_BOOT_APP_ID"  > "${MOUNT_DIR}/etc/harbor/boot-app-id"
+    unset HARBOR_BOOT_APP_KEY HARBOR_BOOT_APP_ID
+    echo ":: harbor-boot-reporter App credentials injected."
 fi
 
 ESP_MOUNT=$(findmnt -n -o TARGET /boot/efi 2>/dev/null || echo "")

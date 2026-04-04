@@ -144,30 +144,53 @@ jobs:
           RUNNER_REG_APP_ID: ${{ vars.RUNNER_REG_APP_ID }}
           GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
           GHIO_PULLER_PAT: ${{ secrets.GHIO_PULLER_PAT }}
+          HARBOR_BOOT_APP_KEY: ${{ secrets.HARBOR_BOOT_APP_KEY }}
+          HARBOR_BOOT_APP_ID: ${{ vars.HARBOR_BOOT_APP_ID }}
         run: |
           ssh harbor-srv 'umask 077; mkdir -p /var/lib/gh-deploy/harbor-deploy'
-          printf '%s' "$KRB5_SECRETS_B64"   | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/krb5-secrets.b64'
-          printf '%s' "$RUNNER_REG_APP_KEY" | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-key.pem'
-          printf '%s' "$RUNNER_REG_APP_ID"  | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-app-id'
-          printf '%s' "$GH_DEPLOY_SSH_KEY"  | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/gh-deploy-key'
-          printf '%s' "$GHIO_PULLER_PAT"    | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/ghio-puller-pat'
+          printf '%s' "$KRB5_SECRETS_B64"    | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/krb5-secrets.b64'
+          printf '%s' "$RUNNER_REG_APP_KEY"  | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-key.pem'
+          printf '%s' "$RUNNER_REG_APP_ID"   | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-app-id'
+          printf '%s' "$GH_DEPLOY_SSH_KEY"   | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/gh-deploy-key'
+          printf '%s' "$GHIO_PULLER_PAT"     | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/ghio-puller-pat'
+          printf '%s' "${{ github.run_id }}" | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/run-id'
+          printf '%s' "$HARBOR_BOOT_APP_KEY" | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/boot-app-key'
+          printf '%s' "$HARBOR_BOOT_APP_ID"  | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/boot-app-id'
 
       - name: Flash server
         run: ssh harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
 
   verify:
     needs: [flash]
-    runs-on: [self-hosted, harbor-srv-docker]
-    timeout-minutes: 3
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: ${{ always() && needs.flash.result != 'cancelled' && needs.flash.result != 'skipped' }}
     steps:
       - name: Verify root partition
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           EXPECTED="${{ needs.flash.outputs.target_label }}"
-          ACTUAL=$(ssh harbor-srv \
-            'source /etc/harbor/partitions.conf
-             ACTIVE=$(findmnt -n -o SOURCE /)
-             if [ "$ACTIVE" = "$ROOT_A_DEV" ]; then echo "Root A"; else echo "Root B"; fi')
+          RUN_ID="${{ github.run_id }}"
+
+          echo "Polling HARBOR_BOOT_LAST for run ${RUN_ID}..."
+          RESULT=""
+          for i in $(seq 1 120); do
+            RESULT=$(gh api \
+              "repos/${{ github.repository }}/actions/variables/HARBOR_BOOT_LAST" \
+              --jq '.value' 2>/dev/null || echo "")
+            RESULT_RUN="${RESULT%%:*}"
+            if [ "$RESULT_RUN" = "$RUN_ID" ]; then break; fi
+            sleep 5
+          done
+
+          RESULT_RUN="${RESULT%%:*}"
+          if [ "$RESULT_RUN" != "$RUN_ID" ]; then
+            echo "ERROR: timed out waiting for post-boot result" >&2
+            exit 1
+          fi
+
+          ACTUAL="${RESULT#*:}"
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "ERROR: running on '${ACTUAL}', expected '${EXPECTED}'" >&2
             exit 1
