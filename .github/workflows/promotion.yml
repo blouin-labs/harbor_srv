@@ -125,7 +125,18 @@ jobs:
     needs: [download]
     runs-on: [self-hosted, harbor-srv-docker]
     if: ${{ always() && needs.download.result == 'success' }}
+    outputs:
+      target_label: ${{ steps.target.outputs.target_label }}
     steps:
+      - name: Determine target partition
+        id: target
+        run: |
+          LABEL=$(ssh harbor-srv \
+            'source /etc/harbor/partitions.conf
+             ACTIVE=$(findmnt -n -o SOURCE /)
+             if [ "$ACTIVE" = "$ROOT_A_DEV" ]; then echo "Root B"; else echo "Root A"; fi')
+          echo "target_label=${LABEL}" >> "$GITHUB_OUTPUT"
+
       - name: Stage secrets
         env:
           KRB5_SECRETS_B64: ${{ secrets.KRB5_SECRETS_B64 }}
@@ -146,54 +157,19 @@ jobs:
 
   verify:
     needs: [flash]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, harbor-srv-docker]
+    timeout-minutes: 3
     if: ${{ always() && needs.flash.result != 'cancelled' && needs.flash.result != 'skipped' }}
     steps:
-      - name: Generate token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ vars.RUNNER_POLLER_APP_ID }}
-          private-key: ${{ secrets.RUNNER_POLLER_APP_KEY }}
-          owner: ${{ github.repository_owner }}
-
-      - name: Wait for harbor-srv-docker to reboot and reconnect
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      - name: Verify root partition
         run: |
-          OFFLINE_TIMEOUT=90
-          ONLINE_TIMEOUT=300
-          POLL=10
-
-          echo "Phase 1: waiting for harbor-srv-docker to go offline (reboot started)..."
-          elapsed=0
-          status=""
-          while [ "$elapsed" -lt "$OFFLINE_TIMEOUT" ]; do
-            status=$(gh api "repos/${{ github.repository }}/actions/runners" \
-              --jq '.runners[] | select(.name == "harbor-srv-docker") | .status')
-            [ "$status" = "offline" ] && break
-            echo "  status=${status:-not found}, elapsed=${elapsed}s"
-            sleep "$POLL"
-            elapsed=$((elapsed + POLL))
-          done
-          if [ "$status" != "offline" ]; then
-            echo "ERROR: harbor-srv-docker never went offline — reboot may not have started" >&2
+          EXPECTED="${{ needs.flash.outputs.target_label }}"
+          ACTUAL=$(ssh harbor-srv \
+            'source /etc/harbor/partitions.conf
+             ACTIVE=$(findmnt -n -o SOURCE /)
+             if [ "$ACTIVE" = "$ROOT_A_DEV" ]; then echo "Root A"; else echo "Root B"; fi')
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "ERROR: running on '${ACTUAL}', expected '${EXPECTED}'" >&2
             exit 1
           fi
-          echo "Runner is offline. Waiting for it to come back..."
-
-          echo "Phase 2: waiting for harbor-srv-docker to come back online..."
-          elapsed=0
-          while [ "$elapsed" -lt "$ONLINE_TIMEOUT" ]; do
-            status=$(gh api "repos/${{ github.repository }}/actions/runners" \
-              --jq '.runners[] | select(.name == "harbor-srv-docker") | .status')
-            [ "$status" = "online" ] && break
-            echo "  status=${status}, elapsed=${elapsed}s"
-            sleep "$POLL"
-            elapsed=$((elapsed + POLL))
-          done
-          if [ "$status" != "online" ]; then
-            echo "ERROR: harbor-srv-docker did not come back online within ${ONLINE_TIMEOUT}s" >&2
-            exit 1
-          fi
-          echo "Runner is back online — deploy succeeded."
+          echo "Verified: server is running on ${ACTUAL}"
