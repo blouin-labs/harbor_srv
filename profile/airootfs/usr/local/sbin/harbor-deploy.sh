@@ -137,14 +137,21 @@ else
     echo "WARNING: RUNNER_REG_APP_KEY not set — harbor-runner cannot self-register" >&2
 fi
 
-# --- Inject gh-deploy SSH private key ---
+# --- Inject gh-deploy SSH private key and update authorized_keys ---
 if [ -n "${GH_DEPLOY_SSH_KEY:-}" ]; then
     echo ":: Injecting gh-deploy SSH private key..."
     mkdir -p "${MOUNT_DIR}/etc/harbor-runner"
     printf '%s\n' "$GH_DEPLOY_SSH_KEY" > "${MOUNT_DIR}/etc/harbor-runner/gh-deploy-key"
     chmod 600 "${MOUNT_DIR}/etc/harbor-runner/gh-deploy-key"
+
+    echo ":: Updating gh-deploy authorized_keys..."
+    mkdir -p "${MOUNT_DIR}/var/lib/gh-deploy/.ssh"
+    ssh-keygen -y -f "${MOUNT_DIR}/etc/harbor-runner/gh-deploy-key" \
+        > "${MOUNT_DIR}/var/lib/gh-deploy/.ssh/authorized_keys"
+    chmod 600 "${MOUNT_DIR}/var/lib/gh-deploy/.ssh/authorized_keys"
+
     unset GH_DEPLOY_SSH_KEY
-    echo ":: gh-deploy SSH private key injected."
+    echo ":: gh-deploy SSH private key and authorized_keys injected."
 else
     echo "WARNING: GH_DEPLOY_SSH_KEY not set — CI deploy jobs will fail" >&2
 fi
