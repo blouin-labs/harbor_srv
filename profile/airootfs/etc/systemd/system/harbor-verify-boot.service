@@ -1,0 +1,12 @@
+[Unit]
+Description=Harbor post-boot partition verification
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/harbor/last-deploy-context
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/harbor-verify-boot.sh
+
+[Install]
+WantedBy=multi-user.target
