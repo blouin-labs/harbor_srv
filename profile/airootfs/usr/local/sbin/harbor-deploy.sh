@@ -129,7 +129,7 @@ fi
 if [ -n "${RUNNER_REG_APP_KEY:-}" ]; then
     echo ":: Injecting runner registration App private key..."
     mkdir -p "${MOUNT_DIR}/etc/harbor-runner"
-    printf '%s' "$RUNNER_REG_APP_KEY" > "${MOUNT_DIR}/etc/harbor-runner/runner-reg-key.pem"
+    printf '%s\n' "$RUNNER_REG_APP_KEY" > "${MOUNT_DIR}/etc/harbor-runner/runner-reg-key.pem"
     chmod 600 "${MOUNT_DIR}/etc/harbor-runner/runner-reg-key.pem"
     unset RUNNER_REG_APP_KEY
     echo ":: Runner registration App private key injected."
@@ -141,7 +141,7 @@ fi
 if [ -n "${GH_DEPLOY_SSH_KEY:-}" ]; then
     echo ":: Injecting gh-deploy SSH private key..."
     mkdir -p "${MOUNT_DIR}/etc/harbor-runner"
-    printf '%s' "$GH_DEPLOY_SSH_KEY" > "${MOUNT_DIR}/etc/harbor-runner/gh-deploy-key"
+    printf '%s\n' "$GH_DEPLOY_SSH_KEY" > "${MOUNT_DIR}/etc/harbor-runner/gh-deploy-key"
     chmod 600 "${MOUNT_DIR}/etc/harbor-runner/gh-deploy-key"
     unset GH_DEPLOY_SSH_KEY
     echo ":: gh-deploy SSH private key injected."
