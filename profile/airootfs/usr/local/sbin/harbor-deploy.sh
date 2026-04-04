@@ -72,6 +72,13 @@ TARGET_ENTRY="${TARGET_ENTRY_BASE}+${BOOT_TRIES}.conf"
 
 echo ":: Target: ${TARGET_LABEL} (${TARGET_DEV})"
 
+# Ensure the target partition is not mounted before writing to it.
+TARGET_MOUNT=$(findmnt -n -o TARGET "$TARGET_DEV" 2>/dev/null || true)
+if [ -n "$TARGET_MOUNT" ]; then
+    echo ":: Unmounting ${TARGET_DEV} from ${TARGET_MOUNT}..."
+    umount "$TARGET_DEV"
+fi
+
 echo ":: Decompressing and writing image..."
 zstd -d "$IMAGE" --stdout | dd of="$TARGET_DEV" bs=4M conv=fsync status=progress
 sync
