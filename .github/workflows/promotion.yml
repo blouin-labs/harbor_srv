@@ -128,6 +128,8 @@ jobs:
     outputs:
       target_label: ${{ steps.target.outputs.target_label }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Determine target partition
         id: target
         run: |
@@ -136,6 +138,12 @@ jobs:
              ACTIVE=$(findmnt -n -o SOURCE /)
              if [ "$ACTIVE" = "$ROOT_A_DEV" ]; then echo "Root B"; else echo "Root A"; fi')
           echo "target_label=${LABEL}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload deploy script
+        run: |
+          scp profile/airootfs/usr/local/sbin/harbor-deploy.sh \
+            harbor-srv:/var/lib/gh-deploy/harbor-deploy-staged.sh
+          ssh harbor-srv chmod +x /var/lib/gh-deploy/harbor-deploy-staged.sh
 
       - name: Stage secrets
         env:
@@ -158,7 +166,15 @@ jobs:
           printf '%s' "$HARBOR_BOOT_APP_ID"  | ssh harbor-srv 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/boot-app-id'
 
       - name: Flash server
-        run: ssh harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
+        run: |
+          STAGED=/var/lib/gh-deploy/harbor-deploy-staged.sh
+          if ssh harbor-srv sudo -n -l "$STAGED" >/dev/null 2>&1; then
+            echo ":: Running CI-staged deploy script"
+            ssh harbor-srv sudo "$STAGED"
+          else
+            echo ":: Sudoers not yet updated — falling back to on-disk script"
+            ssh harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
+          fi
 
   verify:
     needs: [flash]
