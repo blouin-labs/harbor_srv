@@ -128,8 +128,6 @@ jobs:
     outputs:
       target_label: ${{ steps.target.outputs.target_label }}
     steps:
-      - uses: actions/checkout@v4
-
       - name: Determine target partition
         id: target
         run: |
@@ -140,10 +138,14 @@ jobs:
           echo "target_label=${LABEL}" >> "$GITHUB_OUTPUT"
 
       - name: Upload deploy script
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          scp profile/airootfs/usr/local/sbin/harbor-deploy.sh \
-            harbor-srv:/var/lib/gh-deploy/harbor-deploy-staged.sh
+          gh api "repos/${{ github.repository }}/contents/profile/airootfs/usr/local/sbin/harbor-deploy.sh?ref=${{ github.sha }}" \
+            --jq '.content' | base64 -d > /tmp/harbor-deploy-staged.sh
+          scp /tmp/harbor-deploy-staged.sh harbor-srv:/var/lib/gh-deploy/harbor-deploy-staged.sh
           ssh harbor-srv chmod +x /var/lib/gh-deploy/harbor-deploy-staged.sh
+          rm -f /tmp/harbor-deploy-staged.sh
 
       - name: Stage secrets
         env:
