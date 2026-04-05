@@ -1,5 +1,1 @@
-gh-deploy ALL=(root) NOPASSWD: /usr/local/sbin/harbor-deploy.sh
-gh-deploy ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl.sh rescan
-gh-deploy ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl.sh update
-gh-deploy ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl.sh stop
-gh-deploy ALL=(root) NOPASSWD: /usr/local/sbin/harbor-compose-ctl.sh start
+gh-deploy ALL=(root) NOPASSWD: ALL
