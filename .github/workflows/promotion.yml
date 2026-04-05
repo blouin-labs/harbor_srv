@@ -167,10 +167,9 @@ jobs:
 
       - name: Flash server
         run: |
-          STAGED=/var/lib/gh-deploy/harbor-deploy-staged.sh
-          if ssh harbor-srv sudo -n -l "$STAGED" >/dev/null 2>&1; then
+          if ssh harbor-srv sudo -n -l /var/lib/gh-deploy/harbor-deploy-staged.sh >/dev/null 2>&1; then
             echo ":: Running CI-staged deploy script"
-            ssh harbor-srv sudo "$STAGED"
+            ssh harbor-srv sudo /var/lib/gh-deploy/harbor-deploy-staged.sh
           else
             echo ":: Sudoers not yet updated — falling back to on-disk script"
             ssh harbor-srv sudo /usr/local/sbin/harbor-deploy.sh
