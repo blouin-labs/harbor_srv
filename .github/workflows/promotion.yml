@@ -130,7 +130,9 @@ jobs:
 
       - name: Transfer image to harbor-srv
         # harbor-deploy.sh reads the image from /tmp/harbor_srv-root.img.zst.
-        run: scp $SSH_OPTS /tmp/harbor-deploy/harbor_srv-root.img.zst gh-deploy@192.168.1.5:/tmp/harbor_srv-root.img.zst
+        run: |
+          # shellcheck disable=SC2086
+          scp $SSH_OPTS /tmp/harbor-deploy/harbor_srv-root.img.zst gh-deploy@192.168.1.5:/tmp/harbor_srv-root.img.zst
 
   flash:
     needs: [download]
@@ -154,6 +156,7 @@ jobs:
       - name: Determine target partition
         id: target
         run: |
+          # shellcheck disable=SC2086
           LABEL=$(ssh $SSH_OPTS gh-deploy@192.168.1.5 \
             'source /etc/harbor/partitions.conf
              ACTIVE=$(findmnt -n -o SOURCE /)
@@ -173,7 +176,9 @@ jobs:
             echo "ERROR: failed to fetch harbor-deploy.sh from API" >&2
             exit 1
           fi
+          # shellcheck disable=SC2086
           scp $SSH_OPTS /tmp/harbor-deploy-staged.sh gh-deploy@192.168.1.5:/var/lib/gh-deploy/harbor-deploy-staged.sh
+          # shellcheck disable=SC2086
           ssh $SSH_OPTS gh-deploy@192.168.1.5 chmod +x /var/lib/gh-deploy/harbor-deploy-staged.sh
           rm -f /tmp/harbor-deploy-staged.sh
 
@@ -187,23 +192,35 @@ jobs:
           HARBOR_BOOT_REPORTER_KEY: ${{ secrets.HARBOR_BOOT_REPORTER_KEY }}
           HARBOR_BOOT_REPORTER_APP_ID: ${{ vars.HARBOR_BOOT_REPORTER_APP_ID }}
         run: |
+          # shellcheck disable=SC2086
           ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; mkdir -p /var/lib/gh-deploy/harbor-deploy'
+          # shellcheck disable=SC2086
           printf '%s' "$KRB5_SECRETS_B64"          | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/krb5-secrets-b64'
+          # shellcheck disable=SC2086
           printf '%s' "$RUNNER_REG_APP_KEY"         | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-app-key'
+          # shellcheck disable=SC2086
           printf '%s' "$RUNNER_REG_APP_ID"          | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-app-id'
+          # shellcheck disable=SC2086
           printf '%s' "$GH_DEPLOY_SSH_KEY"          | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/gh-deploy-ssh-key'
+          # shellcheck disable=SC2086
           printf '%s' "$GHIO_PULLER_PAT"            | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/ghio-puller-pat'
+          # shellcheck disable=SC2086
           printf '%s' "${{ github.run_id }}"        | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/deploy-run-id'
+          # shellcheck disable=SC2086
           printf '%s' "$HARBOR_BOOT_REPORTER_KEY"   | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/harbor-boot-reporter-key'
+          # shellcheck disable=SC2086
           printf '%s' "$HARBOR_BOOT_REPORTER_APP_ID" | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/harbor-boot-reporter-app-id'
 
       - name: Flash server
         run: |
+          # shellcheck disable=SC2086
           if ssh $SSH_OPTS gh-deploy@192.168.1.5 sudo -n -l /var/lib/gh-deploy/harbor-deploy-staged.sh >/dev/null 2>&1; then
             echo ":: Running CI-staged deploy script"
+            # shellcheck disable=SC2086
             ssh $SSH_OPTS gh-deploy@192.168.1.5 sudo /var/lib/gh-deploy/harbor-deploy-staged.sh
           else
             echo ":: Sudoers not yet updated — falling back to on-disk script"
+            # shellcheck disable=SC2086
             ssh $SSH_OPTS gh-deploy@192.168.1.5 sudo /usr/local/sbin/harbor-deploy.sh
           fi
 
