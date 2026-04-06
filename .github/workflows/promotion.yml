@@ -77,9 +77,9 @@ jobs:
           apt-get update -qq && apt-get install -y -qq curl jq unzip openssh-client
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          printf 'Host harbor-srv\n  HostName 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/gh-deploy-ssh-key
+          chmod 600 ~/.ssh/gh-deploy-ssh-key
+          printf 'Host harbor-srv\n  HostName 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
 
       - name: Confirm
         run: |
@@ -147,9 +147,9 @@ jobs:
           apt-get update -qq && apt-get install -y -qq curl jq openssh-client
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          printf 'Host harbor-srv\n  HostName 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/gh-deploy-ssh-key
+          chmod 600 ~/.ssh/gh-deploy-ssh-key
+          printf 'Host harbor-srv\n  HostName 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
 
       - name: Determine target partition
         id: target
