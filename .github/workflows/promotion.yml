@@ -68,6 +68,8 @@ jobs:
     needs: [promote]
     runs-on: [self-hosted, harbor-srv-docker]
     container: ubuntu:latest
+    env:
+      SSH_OPTS: -i /root/.ssh/gh-deploy-ssh-key -l gh-deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
     if: ${{ always() && (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
     steps:
       - name: Set up environment
@@ -75,11 +77,9 @@ jobs:
           GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
         run: |
           apt-get update -qq && apt-get install -y -qq curl jq unzip openssh-client
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/gh-deploy-ssh-key
-          chmod 600 ~/.ssh/gh-deploy-ssh-key
-          printf 'Host 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking no\n' > ~/.ssh/config
+          install -d -m700 /root/.ssh
+          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > /root/.ssh/gh-deploy-ssh-key
+          chmod 600 /root/.ssh/gh-deploy-ssh-key
 
       - name: Confirm
         run: |
@@ -130,12 +130,14 @@ jobs:
 
       - name: Transfer image to harbor-srv
         # harbor-deploy.sh reads the image from /tmp/harbor_srv-root.img.zst.
-        run: scp /tmp/harbor-deploy/harbor_srv-root.img.zst 192.168.1.5:/tmp/harbor_srv-root.img.zst
+        run: scp $SSH_OPTS /tmp/harbor-deploy/harbor_srv-root.img.zst 192.168.1.5:/tmp/harbor_srv-root.img.zst
 
   flash:
     needs: [download]
     runs-on: [self-hosted, harbor-srv-docker]
     container: ubuntu:latest
+    env:
+      SSH_OPTS: -i /root/.ssh/gh-deploy-ssh-key -l gh-deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
     if: ${{ always() && needs.download.result == 'success' }}
     outputs:
       target_label: ${{ steps.target.outputs.target_label }}
@@ -145,16 +147,14 @@ jobs:
           GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
         run: |
           apt-get update -qq && apt-get install -y -qq curl jq openssh-client
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/gh-deploy-ssh-key
-          chmod 600 ~/.ssh/gh-deploy-ssh-key
-          printf 'Host 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking no\n' > ~/.ssh/config
+          install -d -m700 /root/.ssh
+          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > /root/.ssh/gh-deploy-ssh-key
+          chmod 600 /root/.ssh/gh-deploy-ssh-key
 
       - name: Determine target partition
         id: target
         run: |
-          LABEL=$(ssh 192.168.1.5 \
+          LABEL=$(ssh $SSH_OPTS 192.168.1.5 \
             'source /etc/harbor/partitions.conf
              ACTIVE=$(findmnt -n -o SOURCE /)
              if [ "$ACTIVE" = "$ROOT_A_DEV" ]; then echo "Root B"; else echo "Root A"; fi')
@@ -173,8 +173,8 @@ jobs:
             echo "ERROR: failed to fetch harbor-deploy.sh from API" >&2
             exit 1
           fi
-          scp /tmp/harbor-deploy-staged.sh 192.168.1.5:/var/lib/gh-deploy/harbor-deploy-staged.sh
-          ssh 192.168.1.5 chmod +x /var/lib/gh-deploy/harbor-deploy-staged.sh
+          scp $SSH_OPTS /tmp/harbor-deploy-staged.sh 192.168.1.5:/var/lib/gh-deploy/harbor-deploy-staged.sh
+          ssh $SSH_OPTS 192.168.1.5 chmod +x /var/lib/gh-deploy/harbor-deploy-staged.sh
           rm -f /tmp/harbor-deploy-staged.sh
 
       - name: Stage secrets
@@ -187,24 +187,24 @@ jobs:
           HARBOR_BOOT_REPORTER_KEY: ${{ secrets.HARBOR_BOOT_REPORTER_KEY }}
           HARBOR_BOOT_REPORTER_APP_ID: ${{ vars.HARBOR_BOOT_REPORTER_APP_ID }}
         run: |
-          ssh 192.168.1.5 'umask 077; mkdir -p /var/lib/gh-deploy/harbor-deploy'
-          printf '%s' "$KRB5_SECRETS_B64"          | ssh 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/krb5-secrets-b64'
-          printf '%s' "$RUNNER_REG_APP_KEY"         | ssh 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-app-key'
-          printf '%s' "$RUNNER_REG_APP_ID"          | ssh 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-app-id'
-          printf '%s' "$GH_DEPLOY_SSH_KEY"          | ssh 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/gh-deploy-ssh-key'
-          printf '%s' "$GHIO_PULLER_PAT"            | ssh 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/ghio-puller-pat'
-          printf '%s' "${{ github.run_id }}"        | ssh 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/deploy-run-id'
-          printf '%s' "$HARBOR_BOOT_REPORTER_KEY"   | ssh 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/harbor-boot-reporter-key'
-          printf '%s' "$HARBOR_BOOT_REPORTER_APP_ID" | ssh 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/harbor-boot-reporter-app-id'
+          ssh $SSH_OPTS 192.168.1.5 'umask 077; mkdir -p /var/lib/gh-deploy/harbor-deploy'
+          printf '%s' "$KRB5_SECRETS_B64"          | ssh $SSH_OPTS 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/krb5-secrets-b64'
+          printf '%s' "$RUNNER_REG_APP_KEY"         | ssh $SSH_OPTS 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-app-key'
+          printf '%s' "$RUNNER_REG_APP_ID"          | ssh $SSH_OPTS 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/runner-reg-app-id'
+          printf '%s' "$GH_DEPLOY_SSH_KEY"          | ssh $SSH_OPTS 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/gh-deploy-ssh-key'
+          printf '%s' "$GHIO_PULLER_PAT"            | ssh $SSH_OPTS 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/ghio-puller-pat'
+          printf '%s' "${{ github.run_id }}"        | ssh $SSH_OPTS 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/deploy-run-id'
+          printf '%s' "$HARBOR_BOOT_REPORTER_KEY"   | ssh $SSH_OPTS 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/harbor-boot-reporter-key'
+          printf '%s' "$HARBOR_BOOT_REPORTER_APP_ID" | ssh $SSH_OPTS 192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/harbor-boot-reporter-app-id'
 
       - name: Flash server
         run: |
-          if ssh 192.168.1.5 sudo -n -l /var/lib/gh-deploy/harbor-deploy-staged.sh >/dev/null 2>&1; then
+          if ssh $SSH_OPTS 192.168.1.5 sudo -n -l /var/lib/gh-deploy/harbor-deploy-staged.sh >/dev/null 2>&1; then
             echo ":: Running CI-staged deploy script"
-            ssh 192.168.1.5 sudo /var/lib/gh-deploy/harbor-deploy-staged.sh
+            ssh $SSH_OPTS 192.168.1.5 sudo /var/lib/gh-deploy/harbor-deploy-staged.sh
           else
             echo ":: Sudoers not yet updated — falling back to on-disk script"
-            ssh 192.168.1.5 sudo /usr/local/sbin/harbor-deploy.sh
+            ssh $SSH_OPTS 192.168.1.5 sudo /usr/local/sbin/harbor-deploy.sh
           fi
 
   verify:
