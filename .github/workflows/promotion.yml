@@ -70,12 +70,16 @@ jobs:
     container: ubuntu:latest
     if: ${{ always() && (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
     steps:
-      # Uses full repo ref so no checkout is needed in this container job.
-      # Action is fetched from staging, not the exact triggering SHA — acceptable
-      # since Promotion only runs against staging/main.
-      - uses: blouin-labs/harbor_srv/.github/actions/setup-deploy-env@staging
-        with:
-          ssh-key: ${{ secrets.GH_DEPLOY_SSH_KEY }}
+      - name: Set up environment
+        env:
+          GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl jq unzip openssh-client
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/gh-deploy-ssh-key
+          chmod 600 ~/.ssh/gh-deploy-ssh-key
+          printf 'Host harbor-srv\n  HostName 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
 
       - name: Confirm
         run: |
@@ -136,12 +140,16 @@ jobs:
     outputs:
       target_label: ${{ steps.target.outputs.target_label }}
     steps:
-      # Uses full repo ref so no checkout is needed in this container job.
-      # Action is fetched from staging, not the exact triggering SHA — acceptable
-      # since Promotion only runs against staging/main.
-      - uses: blouin-labs/harbor_srv/.github/actions/setup-deploy-env@staging
-        with:
-          ssh-key: ${{ secrets.GH_DEPLOY_SSH_KEY }}
+      - name: Set up environment
+        env:
+          GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl jq openssh-client
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/gh-deploy-ssh-key
+          chmod 600 ~/.ssh/gh-deploy-ssh-key
+          printf 'Host harbor-srv\n  HostName 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
 
       - name: Determine target partition
         id: target
