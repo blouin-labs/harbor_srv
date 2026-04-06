@@ -69,6 +69,7 @@ jobs:
     runs-on: [self-hosted, harbor-srv-docker]
     container: ubuntu:latest
     env:
+      # TODO(blouin-labs/issues#93): replace StrictHostKeyChecking=no with pinned host key
       SSH_OPTS: -i /root/.ssh/gh-deploy-ssh-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
     if: ${{ always() && (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
     steps:
@@ -139,6 +140,7 @@ jobs:
     runs-on: [self-hosted, harbor-srv-docker]
     container: ubuntu:latest
     env:
+      # TODO(blouin-labs/issues#93): replace StrictHostKeyChecking=no with pinned host key
       SSH_OPTS: -i /root/.ssh/gh-deploy-ssh-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
     if: ${{ always() && needs.download.result == 'success' }}
     outputs:
