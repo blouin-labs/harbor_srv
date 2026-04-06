@@ -70,16 +70,9 @@ jobs:
     container: ubuntu:latest
     if: ${{ always() && (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
     steps:
-      - name: Set up environment
-        env:
-          GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
-        run: |
-          apt-get update -qq && apt-get install -y -qq curl jq unzip openssh-client
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/gh-deploy-ssh-key
-          chmod 600 ~/.ssh/gh-deploy-ssh-key
-          printf 'Host harbor-srv\n  HostName 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+      - uses: ./.github/actions/setup-deploy-env
+        with:
+          ssh-key: ${{ secrets.GH_DEPLOY_SSH_KEY }}
 
       - name: Confirm
         run: |
@@ -140,16 +133,9 @@ jobs:
     outputs:
       target_label: ${{ steps.target.outputs.target_label }}
     steps:
-      - name: Set up environment
-        env:
-          GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
-        run: |
-          apt-get update -qq && apt-get install -y -qq curl jq openssh-client
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/gh-deploy-ssh-key
-          chmod 600 ~/.ssh/gh-deploy-ssh-key
-          printf 'Host harbor-srv\n  HostName 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+      - uses: ./.github/actions/setup-deploy-env
+        with:
+          ssh-key: ${{ secrets.GH_DEPLOY_SSH_KEY }}
 
       - name: Determine target partition
         id: target
