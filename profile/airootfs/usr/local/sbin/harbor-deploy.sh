@@ -15,14 +15,14 @@ MOUNT_DIR=""
 SECRETS_DIR="/var/lib/gh-deploy/harbor-deploy"
 
 # Read secrets staged by the CI runner and delete them immediately.
-KRB5_SECRETS_B64=""   ; if [ -f "${SECRETS_DIR}/krb5-secrets.b64"   ]; then KRB5_SECRETS_B64=$(   cat "${SECRETS_DIR}/krb5-secrets.b64");   fi
-RUNNER_REG_APP_KEY="" ; if [ -f "${SECRETS_DIR}/runner-reg-key.pem" ]; then RUNNER_REG_APP_KEY=$( cat "${SECRETS_DIR}/runner-reg-key.pem"); fi
-RUNNER_REG_APP_ID=""  ; if [ -f "${SECRETS_DIR}/runner-reg-app-id"  ]; then RUNNER_REG_APP_ID=$(  cat "${SECRETS_DIR}/runner-reg-app-id");  fi
-GH_DEPLOY_SSH_KEY=""  ; if [ -f "${SECRETS_DIR}/gh-deploy-key"      ]; then GH_DEPLOY_SSH_KEY=$(  cat "${SECRETS_DIR}/gh-deploy-key");      fi
-GHIO_PULLER_PAT=""    ; if [ -f "${SECRETS_DIR}/ghio-puller-pat"    ]; then GHIO_PULLER_PAT=$(    cat "${SECRETS_DIR}/ghio-puller-pat");    fi
-DEPLOY_RUN_ID=""      ; if [ -f "${SECRETS_DIR}/run-id"             ]; then DEPLOY_RUN_ID=$(      cat "${SECRETS_DIR}/run-id");             fi
-HARBOR_BOOT_REPORTER_KEY=""; if [ -f "${SECRETS_DIR}/boot-app-key"       ]; then HARBOR_BOOT_REPORTER_KEY=$(cat "${SECRETS_DIR}/boot-app-key");       fi
-HARBOR_BOOT_REPORTER_APP_ID="" ; if [ -f "${SECRETS_DIR}/boot-app-id"        ]; then HARBOR_BOOT_REPORTER_APP_ID=$( cat "${SECRETS_DIR}/boot-app-id");        fi
+KRB5_SECRETS_B64=""   ; if [ -f "${SECRETS_DIR}/krb5-secrets-b64"            ]; then KRB5_SECRETS_B64=$(          cat "${SECRETS_DIR}/krb5-secrets-b64");            fi
+RUNNER_REG_APP_KEY="" ; if [ -f "${SECRETS_DIR}/runner-reg-app-key"          ]; then RUNNER_REG_APP_KEY=$(        cat "${SECRETS_DIR}/runner-reg-app-key");          fi
+RUNNER_REG_APP_ID=""  ; if [ -f "${SECRETS_DIR}/runner-reg-app-id"           ]; then RUNNER_REG_APP_ID=$(         cat "${SECRETS_DIR}/runner-reg-app-id");           fi
+GH_DEPLOY_SSH_KEY=""  ; if [ -f "${SECRETS_DIR}/gh-deploy-ssh-key"           ]; then GH_DEPLOY_SSH_KEY=$(         cat "${SECRETS_DIR}/gh-deploy-ssh-key");           fi
+GHIO_PULLER_PAT=""    ; if [ -f "${SECRETS_DIR}/ghio-puller-pat"             ]; then GHIO_PULLER_PAT=$(           cat "${SECRETS_DIR}/ghio-puller-pat");             fi
+DEPLOY_RUN_ID=""      ; if [ -f "${SECRETS_DIR}/deploy-run-id"               ]; then DEPLOY_RUN_ID=$(             cat "${SECRETS_DIR}/deploy-run-id");               fi
+HARBOR_BOOT_REPORTER_KEY=""    ; if [ -f "${SECRETS_DIR}/harbor-boot-reporter-key"    ]; then HARBOR_BOOT_REPORTER_KEY=$(   cat "${SECRETS_DIR}/harbor-boot-reporter-key");    fi
+HARBOR_BOOT_REPORTER_APP_ID="" ; if [ -f "${SECRETS_DIR}/harbor-boot-reporter-app-id" ]; then HARBOR_BOOT_REPORTER_APP_ID=$(cat "${SECRETS_DIR}/harbor-boot-reporter-app-id"); fi
 rm -rf "$SECRETS_DIR"
 
 cleanup() {
