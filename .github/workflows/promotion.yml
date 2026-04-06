@@ -203,6 +203,7 @@ jobs:
             RESULT=$(gh api \
               "repos/${{ github.repository }}/actions/variables/HARBOR_BOOT_LAST" \
               --jq '.value' 2>/dev/null || echo "")
+            echo "Poll #${_}: RESULT='${RESULT}'"
             RESULT_RUN="${RESULT%%:*}"
             if [ "$RESULT_RUN" = "$RUN_ID" ]; then break; fi
             sleep 5
