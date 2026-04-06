@@ -67,8 +67,20 @@ jobs:
   download:
     needs: [promote]
     runs-on: [self-hosted, harbor-srv-docker]
+    container: ubuntu:latest
     if: ${{ always() && (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
     steps:
+      - name: Set up environment
+        env:
+          GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl jq unzip openssh-client
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf 'Host harbor-srv\n  HostName 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+
       - name: Confirm
         run: |
           if [ "${{ inputs.confirm }}" != "ok reboot" ]; then
@@ -117,17 +129,28 @@ jobs:
           rm /tmp/harbor-deploy/artifact.zip
 
       - name: Transfer image to harbor-srv
-        # SSH config in the runner container maps "harbor-srv" → gh-deploy@192.168.1.5.
         # harbor-deploy.sh reads the image from /tmp/harbor_srv-root.img.zst.
         run: scp /tmp/harbor-deploy/harbor_srv-root.img.zst harbor-srv:/tmp/harbor_srv-root.img.zst
 
   flash:
     needs: [download]
     runs-on: [self-hosted, harbor-srv-docker]
+    container: ubuntu:latest
     if: ${{ always() && needs.download.result == 'success' }}
     outputs:
       target_label: ${{ steps.target.outputs.target_label }}
     steps:
+      - name: Set up environment
+        env:
+          GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl jq openssh-client
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf 'Host harbor-srv\n  HostName 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+
       - name: Determine target partition
         id: target
         run: |
