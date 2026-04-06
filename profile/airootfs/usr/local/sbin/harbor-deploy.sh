@@ -23,6 +23,7 @@ GHIO_PULLER_PAT=""    ; if [ -f "${SECRETS_DIR}/ghio-puller-pat"             ]; 
 DEPLOY_RUN_ID=""      ; if [ -f "${SECRETS_DIR}/deploy-run-id"               ]; then DEPLOY_RUN_ID=$(             cat "${SECRETS_DIR}/deploy-run-id");               fi
 HARBOR_BOOT_REPORTER_KEY=""    ; if [ -f "${SECRETS_DIR}/harbor-boot-reporter-key"    ]; then HARBOR_BOOT_REPORTER_KEY=$(   cat "${SECRETS_DIR}/harbor-boot-reporter-key");    fi
 HARBOR_BOOT_REPORTER_APP_ID="" ; if [ -f "${SECRETS_DIR}/harbor-boot-reporter-app-id" ]; then HARBOR_BOOT_REPORTER_APP_ID=$(cat "${SECRETS_DIR}/harbor-boot-reporter-app-id"); fi
+HARBOR_SRV_HOST_KEY=""         ; if [ -f "${SECRETS_DIR}/harbor-srv-host-key"          ]; then HARBOR_SRV_HOST_KEY=$(        cat "${SECRETS_DIR}/harbor-srv-host-key");          fi
 rm -rf "$SECRETS_DIR"
 
 cleanup() {
@@ -183,6 +184,22 @@ if [ -n "${GHIO_PULLER_PAT:-}" ]; then
     echo ":: ghio-puller PAT injected."
 else
     echo "WARNING: GHIO_PULLER_PAT not set — ghcr.io docker login will fail on boot" >&2
+fi
+
+# --- Inject SSH host key (ensures host key is consistent across OS flashes) ---
+if [ -n "${HARBOR_SRV_HOST_KEY:-}" ]; then
+    echo ":: Injecting SSH host key..."
+    printf '%s\n' "$HARBOR_SRV_HOST_KEY" > "${MOUNT_DIR}/etc/ssh/ssh_host_ed25519_key"
+    chmod 600 "${MOUNT_DIR}/etc/ssh/ssh_host_ed25519_key"
+    chown 0:0 "${MOUNT_DIR}/etc/ssh/ssh_host_ed25519_key"
+    ssh-keygen -y -f "${MOUNT_DIR}/etc/ssh/ssh_host_ed25519_key" \
+        > "${MOUNT_DIR}/etc/ssh/ssh_host_ed25519_key.pub"
+    chmod 644 "${MOUNT_DIR}/etc/ssh/ssh_host_ed25519_key.pub"
+    chown 0:0 "${MOUNT_DIR}/etc/ssh/ssh_host_ed25519_key.pub"
+    unset HARBOR_SRV_HOST_KEY
+    echo ":: SSH host key injected."
+else
+    echo "WARNING: HARBOR_SRV_HOST_KEY not set — host key will be regenerated on boot" >&2
 fi
 
 # --- Inject post-boot verification context and harbor-boot-reporter App credentials ---

@@ -69,18 +69,19 @@ jobs:
     runs-on: [self-hosted, harbor-srv-docker]
     container: ubuntu:latest
     env:
-      # TODO(blouin-labs/issues#93): replace StrictHostKeyChecking=no with pinned host key
-      SSH_OPTS: -i /root/.ssh/gh-deploy-ssh-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+      SSH_OPTS: -i /root/.ssh/gh-deploy-ssh-key -o StrictHostKeyChecking=yes
     if: ${{ always() && (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
     steps:
       - name: Set up environment
         env:
           GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
+          HARBOR_SRV_KNOWN_HOSTS: ${{ secrets.HARBOR_SRV_KNOWN_HOSTS }}
         run: |
           apt-get update -qq && apt-get install -y -qq curl jq unzip openssh-client
           install -d -m700 /root/.ssh
           printf '%s\n' "$GH_DEPLOY_SSH_KEY" > /root/.ssh/gh-deploy-ssh-key
           chmod 600 /root/.ssh/gh-deploy-ssh-key
+          printf '%s\n' "$HARBOR_SRV_KNOWN_HOSTS" >> /root/.ssh/known_hosts
 
       - name: Confirm
         run: |
@@ -140,8 +141,7 @@ jobs:
     runs-on: [self-hosted, harbor-srv-docker]
     container: ubuntu:latest
     env:
-      # TODO(blouin-labs/issues#93): replace StrictHostKeyChecking=no with pinned host key
-      SSH_OPTS: -i /root/.ssh/gh-deploy-ssh-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+      SSH_OPTS: -i /root/.ssh/gh-deploy-ssh-key -o StrictHostKeyChecking=yes
     if: ${{ always() && needs.download.result == 'success' }}
     outputs:
       target_label: ${{ steps.target.outputs.target_label }}
@@ -149,11 +149,13 @@ jobs:
       - name: Set up environment
         env:
           GH_DEPLOY_SSH_KEY: ${{ secrets.GH_DEPLOY_SSH_KEY }}
+          HARBOR_SRV_KNOWN_HOSTS: ${{ secrets.HARBOR_SRV_KNOWN_HOSTS }}
         run: |
           apt-get update -qq && apt-get install -y -qq curl jq openssh-client
           install -d -m700 /root/.ssh
           printf '%s\n' "$GH_DEPLOY_SSH_KEY" > /root/.ssh/gh-deploy-ssh-key
           chmod 600 /root/.ssh/gh-deploy-ssh-key
+          printf '%s\n' "$HARBOR_SRV_KNOWN_HOSTS" >> /root/.ssh/known_hosts
 
       - name: Determine target partition
         id: target
@@ -193,6 +195,7 @@ jobs:
           GHIO_PULLER_PAT: ${{ secrets.GHIO_PULLER_PAT }}
           HARBOR_BOOT_REPORTER_KEY: ${{ secrets.HARBOR_BOOT_REPORTER_KEY }}
           HARBOR_BOOT_REPORTER_APP_ID: ${{ vars.HARBOR_BOOT_REPORTER_APP_ID }}
+          HARBOR_SRV_HOST_KEY: ${{ secrets.HARBOR_SRV_HOST_KEY }}
         run: |
           # shellcheck disable=SC2086
           ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; mkdir -p /var/lib/gh-deploy/harbor-deploy'
@@ -212,6 +215,8 @@ jobs:
           printf '%s' "$HARBOR_BOOT_REPORTER_KEY"   | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/harbor-boot-reporter-key'
           # shellcheck disable=SC2086
           printf '%s' "$HARBOR_BOOT_REPORTER_APP_ID" | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/harbor-boot-reporter-app-id'
+          # shellcheck disable=SC2086
+          printf '%s' "$HARBOR_SRV_HOST_KEY"        | ssh $SSH_OPTS gh-deploy@192.168.1.5 'umask 077; cat > /var/lib/gh-deploy/harbor-deploy/harbor-srv-host-key'
 
       - name: Flash server
         run: |
