@@ -79,7 +79,7 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/gh-deploy-ssh-key
           chmod 600 ~/.ssh/gh-deploy-ssh-key
-          printf 'Host 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+          printf 'Host 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking no\n' > ~/.ssh/config
 
       - name: Confirm
         run: |
@@ -149,7 +149,7 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "$GH_DEPLOY_SSH_KEY" > ~/.ssh/gh-deploy-ssh-key
           chmod 600 ~/.ssh/gh-deploy-ssh-key
-          printf 'Host 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+          printf 'Host 192.168.1.5\n  User gh-deploy\n  IdentityFile ~/.ssh/gh-deploy-ssh-key\n  StrictHostKeyChecking no\n' > ~/.ssh/config
 
       - name: Determine target partition
         id: target
