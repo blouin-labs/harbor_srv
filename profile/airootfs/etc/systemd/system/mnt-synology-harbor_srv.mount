@@ -8,7 +8,7 @@ Requires=rpc-gssd.service
 What=synology:/volume1/harbor_srv
 Where=/mnt/synology/harbor_srv
 Type=nfs
-Options=nfsvers=4.1,sec=krb5i,rw,soft,timeo=100,retrans=3,_netdev
+Options=nfsvers=4.1,proto=tcp,sec=krb5i,rw,soft,timeo=100,retrans=3,_netdev
 TimeoutSec=30
 
 [Install]
