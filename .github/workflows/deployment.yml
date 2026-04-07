@@ -48,10 +48,10 @@ jobs:
     container: ubuntu:latest
     env:
       SSH_OPTS: -i /root/.ssh/gh-deploy-ssh-key -o StrictHostKeyChecking=yes
-    if: |
-      ${{ always() &&
-          needs.preflight.result != 'failure' &&
-          (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
+    if: >-
+      always() &&
+      needs.preflight.result != 'failure' &&
+      (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy')
     steps:
       - name: Set up environment
         env:
@@ -274,12 +274,12 @@ jobs:
   promote:
     needs: [preflight, verify]
     runs-on: ubuntu-latest
-    if: |
-      ${{ always() &&
-          needs.preflight.result == 'success' && (
-            inputs.action == 'promote' ||
-            (inputs.action == 'promote-and-deploy' && needs.verify.result == 'success')
-          ) }}
+    if: >-
+      always() &&
+      needs.preflight.result == 'success' && (
+        inputs.action == 'promote' ||
+        (inputs.action == 'promote-and-deploy' && needs.verify.result == 'success')
+      )
     steps:
       - name: Fast-forward main to staging
         env:
