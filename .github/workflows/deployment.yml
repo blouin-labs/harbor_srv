@@ -1,5 +1,5 @@
 ---
-name: Promotion
+name: Deployment
 
 on:
   workflow_dispatch:
@@ -25,52 +25,33 @@ permissions:
   actions: write
 
 jobs:
-  promote:
+  preflight:
     runs-on: ubuntu-latest
     if: ${{ inputs.action == 'promote' || inputs.action == 'promote-and-deploy' }}
-    outputs:
-      run_id: ${{ steps.verify.outputs.run_id }}
     steps:
-      - name: Confirm
-        if: ${{ inputs.action == 'promote-and-deploy' }}
-        run: |
-          if [ "${{ inputs.confirm }}" != "ok reboot" ]; then
-            echo "ERROR: type exactly 'ok reboot' to confirm." >&2
-            exit 1
-          fi
-
-      - name: Verify staging build
-        id: verify
+      - name: Check staging is ahead of main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RUN_ID=$(gh api \
-            "repos/${{ github.repository }}/actions/workflows/build.yml/runs?branch=staging&status=success&per_page=1" \
-            --jq '.workflow_runs[0].id')
-          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
-            echo "ERROR: no successful CI build found on staging" >&2
-            exit 1
-          fi
-          echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
-
-      - name: Fast-forward main to staging
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          SHA=$(gh api "repos/${{ github.repository }}/git/refs/heads/staging" \
+          STAGING=$(gh api "repos/${{ github.repository }}/git/refs/heads/staging" \
             --jq '.object.sha')
-          gh api "repos/${{ github.repository }}/git/refs/heads/main" \
-            --method PATCH \
-            --field sha="$SHA" \
-            --field force=false
+          MAIN=$(gh api "repos/${{ github.repository }}/git/refs/heads/main" \
+            --jq '.object.sha')
+          if [ "$STAGING" = "$MAIN" ]; then
+            echo "ERROR: staging is not ahead of main — nothing to promote" >&2
+            exit 1
+          fi
 
   download:
-    needs: [promote]
+    needs: [preflight]
     runs-on: [self-hosted, harbor-srv-docker]
     container: ubuntu:latest
     env:
       SSH_OPTS: -i /root/.ssh/gh-deploy-ssh-key -o StrictHostKeyChecking=yes
-    if: ${{ always() && (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
+    if: |
+      ${{ always() &&
+          needs.preflight.result != 'failure' &&
+          (inputs.action == 'promote-and-deploy' || inputs.action == 'deploy') }}
     steps:
       - name: Set up environment
         env:
@@ -96,9 +77,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RUN_ID="${{ inputs.run_id }}"
-          if [ -z "$RUN_ID" ]; then
-            RUN_ID="${{ needs.promote.outputs.run_id }}"
-          fi
           if [ -z "$RUN_ID" ]; then
             RUN_ID=$(curl -sf \
               -H "Authorization: Bearer $GH_TOKEN" \
@@ -292,3 +270,24 @@ jobs:
             exit 1
           fi
           echo "Verified: server is running on ${ACTUAL}"
+
+  promote:
+    needs: [preflight, verify]
+    runs-on: ubuntu-latest
+    if: |
+      ${{ always() &&
+          needs.preflight.result == 'success' && (
+            inputs.action == 'promote' ||
+            (inputs.action == 'promote-and-deploy' && needs.verify.result == 'success')
+          ) }}
+    steps:
+      - name: Fast-forward main to staging
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA=$(gh api "repos/${{ github.repository }}/git/refs/heads/staging" \
+            --jq '.object.sha')
+          gh api "repos/${{ github.repository }}/git/refs/heads/main" \
+            --method PATCH \
+            --field sha="$SHA" \
+            --field force=false
