@@ -1,0 +1,16 @@
+[Unit]
+Description=Retry Synology NFS mount on boot failure
+After=network-online.target rpc-gssd.service mnt-synology-harbor_srv.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c '\
+  mountpoint -q /mnt/synology/harbor_srv && exit 0; \
+  for i in 1 2 3; do \
+    sleep 1 && systemctl start mnt-synology-harbor_srv.mount && exit 0; \
+  done; \
+  exit 1'
+
+[Install]
+WantedBy=multi-user.target
