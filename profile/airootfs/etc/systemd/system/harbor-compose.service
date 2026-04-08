@@ -1,7 +1,8 @@
 [Unit]
 Description=Start Docker Compose stacks from NFS share
-After=docker.service
-Requires=docker.service
+After=docker.service mnt-synology-harbor_srv-retry.service
+Requires=docker.service mnt-synology-harbor_srv-retry.service
+BindsTo=mnt-synology-harbor_srv.mount
 
 [Service]
 Type=oneshot
