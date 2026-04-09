@@ -20,6 +20,15 @@ update_stack() {
         return
     fi
 
+    # Pre-create bind-mount source directories so Docker doesn't try to chown
+    # them on startup — chown fails on NFS (sec=krb5i squashes all UIDs to nobody).
+    docker compose -f "${compose_file}" config 2>/dev/null \
+        | grep -A1 'type: bind' \
+        | awk '/source:/{print $2}' \
+        | while IFS= read -r src; do
+            mkdir -p "${src}" 2>/dev/null || true
+          done
+
     echo ":: [${project}] Pulling latest images..."
     if ! docker compose -f "${compose_file}" --project-name "${project}" pull; then
         echo ":: [${project}] WARNING: pull failed, continuing with existing images" >&2
