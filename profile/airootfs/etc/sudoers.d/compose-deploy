@@ -1,1 +1,2 @@
 compose-deploy ALL=(root) NOPASSWD: /usr/bin/rsync --server *
+compose-deploy ALL=(root) NOPASSWD: /usr/local/bin/harbor-compose-update.sh
