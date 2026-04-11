@@ -1,0 +1,7 @@
+[Unit]
+Description=Renew Kerberos TGT for NFS mount
+After=krb5-kdc.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/kinit -k nfs/harbor-srv@HARBOR.LOCAL
