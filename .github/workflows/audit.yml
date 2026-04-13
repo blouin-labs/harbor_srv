@@ -24,7 +24,7 @@ jobs:
       image: archlinux/archlinux:latest
     steps:
       - name: Install arch-audit
-        run: pacman -Sy --noconfirm arch-audit unzip
+        run: pacman -Sy --noconfirm arch-audit jq unzip
 
       - name: Resolve main HEAD SHA
         id: sha
