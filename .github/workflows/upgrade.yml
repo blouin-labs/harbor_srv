@@ -2,7 +2,7 @@
 name: Upgrade
 
 # Opens a PR against staging when a newer Arch snapshot is available.
-# ARCH_SNAPSHOT in build.yml is the sole reproducibility pin — the build container is intentionally unpinned.
+# The date in ./arch-snapshot pins all package versions. The build container is intentionally unpinned.
 
 on:
   schedule:
