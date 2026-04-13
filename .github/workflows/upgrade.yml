@@ -119,18 +119,18 @@ jobs:
           git commit -m "chore: upgrade Arch snapshot to ${NEW_SNAPSHOT}"
           git push origin "${BRANCH}"
 
-          cat > /tmp/pr-body.md <<EOF
-## Arch snapshot upgrade
-
-| | Before | After |
-|---|---|---|
-| \`ARCH_SNAPSHOT\` | \`${CUR_SNAPSHOT}\` | \`${NEW_SNAPSHOT}\` |
-| Container digest | \`${CUR_DIGEST:0:19}...\` | \`${NEW_DIGEST:0:19}...\` |
-
-Archive index: https://archive.archlinux.org/repos/${NEW_SNAPSHOT}/
-
-Refs blouin-labs/issues#119
-EOF
+          {
+            echo "## Arch snapshot upgrade"
+            echo ""
+            echo "| | Before | After |"
+            echo "|---|---|---|"
+            echo "| \`ARCH_SNAPSHOT\` | \`${CUR_SNAPSHOT}\` | \`${NEW_SNAPSHOT}\` |"
+            echo "| Container digest | \`${CUR_DIGEST:0:19}...\` | \`${NEW_DIGEST:0:19}...\` |"
+            echo ""
+            echo "Archive index: https://archive.archlinux.org/repos/${NEW_SNAPSHOT}/"
+            echo ""
+            echo "Refs blouin-labs/issues#119"
+          } > /tmp/pr-body.md
 
           gh pr create \
             --base staging \
