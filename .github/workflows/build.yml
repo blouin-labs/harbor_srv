@@ -23,8 +23,9 @@ jobs:
     runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
     needs: select-runner
     container:
-      # archlinux/archlinux:latest — pinned digest matches ARCH_SNAPSHOT above
-      image: archlinux/archlinux@sha256:0e2b66488c60a96c65041cde5e754957a880b760dd4f00865ed09c131a51cd44
+      # Intentionally unpinned — build tools (pacstrap, e2fsprogs, zstd) are
+      # updated via pacman -Syu each run. Output reproducibility is provided by ARCH_SNAPSHOT alone.
+      image: archlinux/archlinux:latest
       options: --privileged
     steps:
       - uses: actions/checkout@v5

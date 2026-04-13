@@ -1,8 +1,8 @@
 ---
 name: Upgrade
 
-# Opens a PR against staging when a newer Arch snapshot or container digest is available.
-# Both values in build.yml are updated atomically in a single commit.
+# Opens a PR against staging when a newer Arch snapshot is available.
+# ARCH_SNAPSHOT in build.yml is the sole reproducibility pin — the build container is intentionally unpinned.
 
 on:
   schedule:
@@ -37,42 +37,22 @@ jobs:
             echo "snapshot=${SNAPSHOT}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Detect latest container digest
-        id: image
-        run: |
-          TOKEN=$(curl -sf \
-            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:archlinux/archlinux:pull" \
-            | jq -r '.token')
-          DIGEST=$(curl -sfI \
-            -H "Authorization: Bearer ${TOKEN}" \
-            -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
-            "https://registry-1.docker.io/v2/archlinux/archlinux/manifests/latest" \
-            | grep -i '^docker-content-digest:' \
-            | awk '{print $2}' \
-            | tr -d $'\r')
-          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
-
-      - name: Read current pinned values
+      - name: Read current snapshot
         id: current
         run: |
           SNAPSHOT=$(grep 'ARCH_SNAPSHOT:' .github/workflows/build.yml \
             | grep -oP '(?<=")[^"]+(?=")')
-          DIGEST=$(grep 'archlinux/archlinux@' .github/workflows/build.yml \
-            | grep -oP 'sha256:[a-f0-9]+')
           echo "snapshot=${SNAPSHOT}" >> "$GITHUB_OUTPUT"
-          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
 
       - name: Check if update is needed
         id: check
         env:
           NEW_SNAPSHOT: ${{ steps.archive.outputs.snapshot }}
-          NEW_DIGEST: ${{ steps.image.outputs.digest }}
           CUR_SNAPSHOT: ${{ steps.current.outputs.snapshot }}
-          CUR_DIGEST: ${{ steps.current.outputs.digest }}
         run: |
-          echo "Current: snapshot=${CUR_SNAPSHOT}  digest=${CUR_DIGEST:0:19}..."
-          echo "Latest:  snapshot=${NEW_SNAPSHOT}  digest=${NEW_DIGEST:0:19}..."
-          if [ "${CUR_SNAPSHOT}" = "${NEW_SNAPSHOT}" ] && [ "${CUR_DIGEST}" = "${NEW_DIGEST}" ]; then
+          echo "Current: ${CUR_SNAPSHOT}"
+          echo "Latest:  ${NEW_SNAPSHOT}"
+          if [ "${CUR_SNAPSHOT}" = "${NEW_SNAPSHOT}" ]; then
             echo "Already up to date."
             echo "needed=false" >> "$GITHUB_OUTPUT"
           else
@@ -84,13 +64,9 @@ jobs:
         if: steps.check.outputs.needed == 'true'
         env:
           NEW_SNAPSHOT: ${{ steps.archive.outputs.snapshot }}
-          NEW_DIGEST: ${{ steps.image.outputs.digest }}
         run: |
           sed -i \
             's|ARCH_SNAPSHOT: ".*"|ARCH_SNAPSHOT: "'"${NEW_SNAPSHOT}"'"|' \
-            .github/workflows/build.yml
-          sed -i \
-            's|archlinux/archlinux@sha256:[a-f0-9]*|archlinux/archlinux@'"${NEW_DIGEST}"'|' \
             .github/workflows/build.yml
 
       - name: Open PR
@@ -98,9 +74,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_SNAPSHOT: ${{ steps.archive.outputs.snapshot }}
-          NEW_DIGEST: ${{ steps.image.outputs.digest }}
           CUR_SNAPSHOT: ${{ steps.current.outputs.snapshot }}
-          CUR_DIGEST: ${{ steps.current.outputs.digest }}
         run: |
           DATE_SLUG=$(echo "${NEW_SNAPSHOT}" | tr '/' '-')
           BRANCH="chore/upgrade-arch-${DATE_SLUG}"
@@ -126,7 +100,6 @@ jobs:
             echo "| | Before | After |"
             echo "|---|---|---|"
             echo "| \`ARCH_SNAPSHOT\` | \`${CUR_SNAPSHOT}\` | \`${NEW_SNAPSHOT}\` |"
-            echo "| Container digest | \`${CUR_DIGEST:0:19}...\` | \`${NEW_DIGEST:0:19}...\` |"
             echo ""
             echo "Archive index: https://archive.archlinux.org/repos/${NEW_SNAPSHOT}/"
             echo ""
@@ -143,9 +116,7 @@ jobs:
         if: always()
         env:
           NEW_SNAPSHOT: ${{ steps.archive.outputs.snapshot }}
-          NEW_DIGEST: ${{ steps.image.outputs.digest }}
           CUR_SNAPSHOT: ${{ steps.current.outputs.snapshot }}
-          CUR_DIGEST: ${{ steps.current.outputs.digest }}
           NEEDED: ${{ steps.check.outputs.needed }}
         run: |
           {
@@ -154,7 +125,6 @@ jobs:
             echo "| | Current | Latest |"
             echo "|---|---|---|"
             echo "| \`ARCH_SNAPSHOT\` | \`${CUR_SNAPSHOT}\` | \`${NEW_SNAPSHOT}\` |"
-            echo "| Container digest | \`${CUR_DIGEST:0:19}...\` | \`${NEW_DIGEST:0:19}...\` |"
             echo ""
             if [ "${NEEDED}" = "true" ]; then
               echo "**PR opened.**"
