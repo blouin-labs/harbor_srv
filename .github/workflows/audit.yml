@@ -11,8 +11,13 @@ permissions:
   actions: read
 
 jobs:
+  select-runner:
+    uses: ./.github/workflows/select-runner.yml
+    secrets: inherit
+
   arch-audit:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
+    needs: select-runner
     container:
       # Intentionally unpinned: always use the latest advisory data and arch-audit version.
       # Unlike the build, reproducibility is not a goal here — freshness is.
