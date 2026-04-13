@@ -158,14 +158,8 @@ flowchart TD
 
 ## Updating the stack
 
-The build pins all package versions and the build environment to a snapshot date. To upgrade to a newer point in time, edit **`.github/workflows/build.yml`** and **`.github/workflows/check.yml`**: two adjacent values in each:
+All package versions are pinned to `ARCH_SNAPSHOT` in `.github/workflows/build.yml`. The build container (`archlinux/archlinux:latest`) is intentionally unpinned — it only provides scaffolding tools (`pacstrap`, `e2fsprogs`, etc.) that don't affect the built image.
 
-1. Update `ARCH_SNAPSHOT` to the new date (`YYYY/MM/DD`). Check [archive.archlinux.org/repos](https://archive.archlinux.org/repos/) to confirm the date is available.
-2. Update the `container.image` digest to match. Fetch it with:
+Upgrades are automated: the **Upgrade** workflow runs every Monday and opens a PR when a newer snapshot is available at [archive.archlinux.org](https://archive.archlinux.org/repos/). To trigger one immediately, run it manually via `workflow_dispatch`.
 
-```bash
-docker manifest inspect --verbose archlinux/archlinux:latest \
-  | grep -m1 '"digest"' | awk -F'"' '{print $4}'
-```
-
-3. Open a PR—CI builds the new image for review before it reaches the server.
+To pin to a specific date manually, edit `ARCH_SNAPSHOT` in `.github/workflows/build.yml` and open a PR — CI builds the new image for review before it reaches the server.
