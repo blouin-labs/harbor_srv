@@ -24,7 +24,9 @@ jobs:
       image: archlinux/archlinux:latest
     steps:
       - name: Install arch-audit
-        run: pacman -Sy --noconfirm arch-audit jq unzip
+        run: |
+          pacman -Sy --noconfirm archlinux-keyring
+          pacman -Sy --noconfirm arch-audit jq unzip
 
       - name: Resolve main HEAD SHA
         id: sha
@@ -67,26 +69,27 @@ jobs:
       - name: Run arch-audit
         run: |
           set +e
-          RESULT=$(arch-audit --dbpath /tmp/audit-db --color auto --show-cve 2>&1)
+          RESULT=$(arch-audit --dbpath /tmp/audit-db --show-cve)
           EXIT_CODE=$?
           set -e
-
-          echo "$RESULT"
 
           {
             echo "## arch-audit — harbor-srv ($(date -u '+%Y-%m-%d'))"
             echo ""
             echo "**Build:** \`${{ steps.sha.outputs.short }}\`"
             echo ""
-            if [ "$EXIT_CODE" -eq 0 ]; then
-              echo "No known vulnerabilities found."
-            else
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -n "$RESULT" ] || [ "$EXIT_CODE" -ne 0 ]; then
+            echo "$RESULT"
+            {
               echo "### Vulnerabilities found"
               echo ""
               echo "\`\`\`"
               echo "$RESULT"
               echo "\`\`\`"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          exit "$EXIT_CODE"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          else
+            echo "No known vulnerabilities found." >> "$GITHUB_STEP_SUMMARY"
+          fi
