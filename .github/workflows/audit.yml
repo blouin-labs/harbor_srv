@@ -88,11 +88,11 @@ jobs:
               echo "|---|---|---|---|"
               while IFS='|' read -r pkg cves severity fixver; do
                 case "$severity" in
-                  *Critical*) emoji="🔴" ;;
-                  *High*)     emoji="🟠" ;;
-                  *Medium*)   emoji="🟡" ;;
-                  *Low*)      emoji="🔵" ;;
-                  *)          emoji="⚪" ;;
+                  Critical*) emoji="🔴" ;;
+                  High*)     emoji="🟠" ;;
+                  Medium*)   emoji="🟡" ;;
+                  Low*)      emoji="🔵" ;;
+                  *)         emoji="⚪" ;;
                 esac
                 echo "| ${emoji} ${severity} | \`${pkg}\` | ${cves} | \`${fixver}\` |"
               done <<< "$RESULT"
