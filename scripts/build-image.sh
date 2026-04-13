@@ -151,6 +151,10 @@ arch-chroot "${WORK_DIR}/mnt" systemctl enable \
 # Generate initramfs (now with our custom preset and hooks config)
 arch-chroot "${WORK_DIR}/mnt" mkinitcpio -P
 
+# --- Export pacman local DB for security auditing ---
+echo ":: Exporting pacman DB..."
+tar -C "${WORK_DIR}/mnt/var/lib/pacman" -czf "${OUTPUT_DIR}/pacman-db-local.tar.gz" local/
+
 # --- Finalize ---
 echo ":: Syncing and unmounting..."
 sync

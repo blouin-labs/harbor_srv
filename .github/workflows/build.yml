@@ -45,8 +45,15 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: harbor_srv-root-${{ steps.sha.outputs.short }}
-          path: output/
+          path: output/harbor_srv-root.img.zst*
           retention-days: 30
+
+      - name: Upload pacman DB artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: harbor_srv-pacman-db-${{ steps.sha.outputs.short }}
+          path: output/pacman-db-local.tar.gz
+          retention-days: 90
 
       - name: Write build summary
         env:
