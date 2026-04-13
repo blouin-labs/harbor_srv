@@ -1,9 +1,8 @@
 ---
 name: Build
 
-# Snapshot date and Docker image digest are pinned together.
-# To upgrade the full stack, update both values here and open a PR.
-# See README.md "Updating the stack" for the full process.
+# ARCH_SNAPSHOT pins all package versions. The build container is intentionally
+# unpinned — see README.md "Updating the stack" for the upgrade process.
 env:
   ARCH_SNAPSHOT: "2026/03/22"  # archive.archlinux.org date — update to upgrade
 
