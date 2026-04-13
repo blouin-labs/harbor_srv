@@ -67,7 +67,7 @@ jobs:
       - name: Run arch-audit
         run: |
           set +e
-          RESULT=$(arch-audit --dbpath /tmp/audit-db 2>&1)
+          RESULT=$(arch-audit --dbpath /tmp/audit-db --color --show-cve 2>&1)
           EXIT_CODE=$?
           set -e
 
