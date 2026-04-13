@@ -39,10 +39,7 @@ jobs:
 
       - name: Read current snapshot
         id: current
-        run: |
-          SNAPSHOT=$(grep 'ARCH_SNAPSHOT:' .github/workflows/build.yml \
-            | grep -oP '(?<=")[^"]+(?=")')
-          echo "snapshot=${SNAPSHOT}" >> "$GITHUB_OUTPUT"
+        run: echo "snapshot=$(cat arch-snapshot)" >> "$GITHUB_OUTPUT"
 
       - name: Check if update is needed
         id: check
@@ -60,14 +57,11 @@ jobs:
             echo "needed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Patch build.yml
+      - name: Update arch-snapshot
         if: steps.check.outputs.needed == 'true'
         env:
           NEW_SNAPSHOT: ${{ steps.archive.outputs.snapshot }}
-        run: |
-          sed -i \
-            's|ARCH_SNAPSHOT: ".*"|ARCH_SNAPSHOT: "'"${NEW_SNAPSHOT}"'"|' \
-            .github/workflows/build.yml
+        run: echo "${NEW_SNAPSHOT}" > arch-snapshot
 
       - name: Open PR
         if: steps.check.outputs.needed == 'true'
@@ -90,7 +84,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           git checkout -b "${BRANCH}"
-          git add .github/workflows/build.yml
+          git add arch-snapshot
           git commit -m "chore: upgrade Arch snapshot to ${NEW_SNAPSHOT}"
           git push origin "${BRANCH}"
 

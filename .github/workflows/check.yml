@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [staging]
     paths:
+      - 'arch-snapshot'
       - 'profile/**'
       - 'scripts/**'
       - '.github/workflows/**'

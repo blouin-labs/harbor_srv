@@ -1,15 +1,14 @@
 ---
 name: Build
 
-# ARCH_SNAPSHOT pins all package versions. The build container is intentionally
-# unpinned — see README.md "Updating the stack" for the upgrade process.
-env:
-  ARCH_SNAPSHOT: "2026/03/22"  # archive.archlinux.org date — update to upgrade
+# Package versions are pinned by the date in ./arch-snapshot.
+# The build container is intentionally unpinned — see README.md "Updating the stack".
 
 on:
   push:
     branches: [staging]
     paths:
+      - 'arch-snapshot'
       - 'profile/**'
       - 'scripts/**'
 
@@ -28,6 +27,9 @@ jobs:
       options: --privileged
     steps:
       - uses: actions/checkout@v5
+
+      - name: Read arch snapshot
+        run: echo "ARCH_SNAPSHOT=$(cat arch-snapshot)" >> "$GITHUB_ENV"
 
       - name: Compute short SHA
         id: sha
