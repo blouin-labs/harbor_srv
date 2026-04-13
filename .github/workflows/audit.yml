@@ -1,0 +1,87 @@
+---
+name: Security Audit
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Weekly, Monday 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  arch-audit:
+    runs-on: ubuntu-latest
+    container:
+      # Intentionally unpinned: always use the latest advisory data and arch-audit version.
+      # Unlike the build, reproducibility is not a goal here — freshness is.
+      image: archlinux/archlinux:latest
+    steps:
+      - name: Install arch-audit
+        run: pacman -Sy --noconfirm arch-audit unzip
+
+      - name: Resolve main HEAD SHA
+        id: sha
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHORT=$(curl -sf \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/git/refs/heads/main" \
+            | jq -r '.object.sha[:7]')
+          echo "short=${SHORT}" >> "$GITHUB_OUTPUT"
+          echo "Auditing build: ${SHORT}"
+
+      - name: Download pacman DB artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ARTIFACT_NAME="harbor_srv-pacman-db-${{ steps.sha.outputs.short }}"
+          ARTIFACT_URL=$(curl -sf \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts?name=${ARTIFACT_NAME}&per_page=1" \
+            | jq -r '.artifacts[0].archive_download_url // empty')
+          if [ -z "$ARTIFACT_URL" ]; then
+            echo "ERROR: artifact ${ARTIFACT_NAME} not found (expired or never built)" >&2
+            exit 1
+          fi
+          curl -sL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -o /tmp/pacman-db-artifact.zip \
+            "$ARTIFACT_URL"
+          unzip -q /tmp/pacman-db-artifact.zip -d /tmp/
+
+      - name: Prepare pacman DB
+        run: |
+          mkdir -p /tmp/audit-db
+          tar -xzf /tmp/pacman-db-local.tar.gz -C /tmp/audit-db/
+
+      - name: Run arch-audit
+        run: |
+          set +e
+          RESULT=$(arch-audit --dbpath /tmp/audit-db 2>&1)
+          EXIT_CODE=$?
+          set -e
+
+          echo "$RESULT"
+
+          {
+            echo "## arch-audit — harbor-srv ($(date -u '+%Y-%m-%d'))"
+            echo ""
+            echo "**Build:** \`${{ steps.sha.outputs.short }}\`"
+            echo ""
+            if [ "$EXIT_CODE" -eq 0 ]; then
+              echo "No known vulnerabilities found."
+            else
+              echo "### Vulnerabilities found"
+              echo ""
+              echo "\`\`\`"
+              echo "$RESULT"
+              echo "\`\`\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit "$EXIT_CODE"
