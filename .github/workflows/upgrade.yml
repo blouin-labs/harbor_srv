@@ -86,7 +86,7 @@ jobs:
           git checkout -b "${BRANCH}"
           git add arch-snapshot
           git commit -m "chore: upgrade Arch snapshot to ${NEW_SNAPSHOT}"
-          git push origin "${BRANCH}"
+          git push --force origin "${BRANCH}"
 
           {
             echo "## Arch snapshot upgrade"
