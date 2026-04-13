@@ -105,10 +105,11 @@ jobs:
           DATE_SLUG=$(echo "${NEW_SNAPSHOT}" | tr '/' '-')
           BRANCH="chore/upgrade-arch-${DATE_SLUG}"
 
-          # Idempotent: skip if a PR is already open for this branch
-          if gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number' \
+          # Idempotent: skip if a PR exists (open or closed) for this branch.
+          # A closed PR means the upgrade was deliberately rejected — don't reopen it.
+          if gh pr list --head "${BRANCH}" --state all --json number --jq '.[0].number' \
               | grep -q '[0-9]'; then
-            echo "PR already open for ${BRANCH} — skipping."
+            echo "PR already exists for ${BRANCH} — skipping."
             exit 0
           fi
 
