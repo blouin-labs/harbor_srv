@@ -1,0 +1,163 @@
+---
+name: Upgrade
+
+# Opens a PR against staging when a newer Arch snapshot or container digest is available.
+# Both values in build.yml are updated atomically in a single commit.
+
+on:
+  schedule:
+    - cron: '0 10 * * 1'  # Weekly, Monday 10:00 UTC
+  workflow_dispatch:
+    inputs:
+      arch_snapshot:
+        description: 'Override ARCH_SNAPSHOT (YYYY/MM/DD) — leave blank to auto-detect'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: staging
+
+      - name: Detect latest archive date
+        id: archive
+        run: |
+          if [ -n "${{ inputs.arch_snapshot }}" ]; then
+            echo "snapshot=${{ inputs.arch_snapshot }}" >> "$GITHUB_OUTPUT"
+          else
+            TIMESTAMP=$(curl -sf https://archive.archlinux.org/repos/last/lastsync)
+            SNAPSHOT=$(date -u -d "@${TIMESTAMP}" '+%Y/%m/%d')
+            echo "snapshot=${SNAPSHOT}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detect latest container digest
+        id: image
+        run: |
+          TOKEN=$(curl -sf \
+            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:archlinux/archlinux:pull" \
+            | jq -r '.token')
+          DIGEST=$(curl -sfI \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
+            "https://registry-1.docker.io/v2/archlinux/archlinux/manifests/latest" \
+            | grep -i '^docker-content-digest:' \
+            | awk '{print $2}' \
+            | tr -d $'\r')
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Read current pinned values
+        id: current
+        run: |
+          SNAPSHOT=$(grep 'ARCH_SNAPSHOT:' .github/workflows/build.yml \
+            | grep -oP '(?<=")[^"]+(?=")')
+          DIGEST=$(grep 'archlinux/archlinux@' .github/workflows/build.yml \
+            | grep -oP 'sha256:[a-f0-9]+')
+          echo "snapshot=${SNAPSHOT}" >> "$GITHUB_OUTPUT"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if update is needed
+        id: check
+        env:
+          NEW_SNAPSHOT: ${{ steps.archive.outputs.snapshot }}
+          NEW_DIGEST: ${{ steps.image.outputs.digest }}
+          CUR_SNAPSHOT: ${{ steps.current.outputs.snapshot }}
+          CUR_DIGEST: ${{ steps.current.outputs.digest }}
+        run: |
+          echo "Current: snapshot=${CUR_SNAPSHOT}  digest=${CUR_DIGEST:0:19}..."
+          echo "Latest:  snapshot=${NEW_SNAPSHOT}  digest=${NEW_DIGEST:0:19}..."
+          if [ "${CUR_SNAPSHOT}" = "${NEW_SNAPSHOT}" ] && [ "${CUR_DIGEST}" = "${NEW_DIGEST}" ]; then
+            echo "Already up to date."
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Update needed."
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Patch build.yml
+        if: steps.check.outputs.needed == 'true'
+        env:
+          NEW_SNAPSHOT: ${{ steps.archive.outputs.snapshot }}
+          NEW_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          sed -i \
+            's|ARCH_SNAPSHOT: ".*"|ARCH_SNAPSHOT: "'"${NEW_SNAPSHOT}"'"|' \
+            .github/workflows/build.yml
+          sed -i \
+            's|archlinux/archlinux@sha256:[a-f0-9]*|archlinux/archlinux@'"${NEW_DIGEST}"'|' \
+            .github/workflows/build.yml
+
+      - name: Open PR
+        if: steps.check.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_SNAPSHOT: ${{ steps.archive.outputs.snapshot }}
+          NEW_DIGEST: ${{ steps.image.outputs.digest }}
+          CUR_SNAPSHOT: ${{ steps.current.outputs.snapshot }}
+          CUR_DIGEST: ${{ steps.current.outputs.digest }}
+        run: |
+          DATE_SLUG=$(echo "${NEW_SNAPSHOT}" | tr '/' '-')
+          BRANCH="chore/upgrade-arch-${DATE_SLUG}"
+
+          # Idempotent: skip if a PR is already open for this branch
+          if gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number' \
+              | grep -q '[0-9]'; then
+            echo "PR already open for ${BRANCH} — skipping."
+            exit 0
+          fi
+
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git checkout -b "${BRANCH}"
+          git add .github/workflows/build.yml
+          git commit -m "chore: upgrade Arch snapshot to ${NEW_SNAPSHOT}"
+          git push origin "${BRANCH}"
+
+          cat > /tmp/pr-body.md <<EOF
+## Arch snapshot upgrade
+
+| | Before | After |
+|---|---|---|
+| \`ARCH_SNAPSHOT\` | \`${CUR_SNAPSHOT}\` | \`${NEW_SNAPSHOT}\` |
+| Container digest | \`${CUR_DIGEST:0:19}...\` | \`${NEW_DIGEST:0:19}...\` |
+
+Archive index: https://archive.archlinux.org/repos/${NEW_SNAPSHOT}/
+
+Refs blouin-labs/issues#119
+EOF
+
+          gh pr create \
+            --base staging \
+            --head "${BRANCH}" \
+            --title "chore: upgrade Arch snapshot to ${NEW_SNAPSHOT}" \
+            --body-file /tmp/pr-body.md
+
+      - name: Write summary
+        if: always()
+        env:
+          NEW_SNAPSHOT: ${{ steps.archive.outputs.snapshot }}
+          NEW_DIGEST: ${{ steps.image.outputs.digest }}
+          CUR_SNAPSHOT: ${{ steps.current.outputs.snapshot }}
+          CUR_DIGEST: ${{ steps.current.outputs.digest }}
+          NEEDED: ${{ steps.check.outputs.needed }}
+        run: |
+          {
+            echo "## Upgrade check — $(date -u '+%Y-%m-%d')"
+            echo ""
+            echo "| | Current | Latest |"
+            echo "|---|---|---|"
+            echo "| \`ARCH_SNAPSHOT\` | \`${CUR_SNAPSHOT}\` | \`${NEW_SNAPSHOT}\` |"
+            echo "| Container digest | \`${CUR_DIGEST:0:19}...\` | \`${NEW_DIGEST:0:19}...\` |"
+            echo ""
+            if [ "${NEEDED}" = "true" ]; then
+              echo "**PR opened.**"
+            else
+              echo "Already up to date — no PR needed."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
