@@ -73,7 +73,7 @@ Kerberos client library configuration. Defines realm `HARBOR.LOCAL` with KDC and
 
 ### [`etc/idmapd.conf`](etc/idmapd.conf)
 
-NFSv4 ID mapping configuration. Sets the idmap domain to `harbor.local` to match the Synology NFS server. With `sec=krb5i`, the NFS server returns file owners as `user@domain` strings rather than numeric UIDs. The client uses `idmapd` to translate these back to local UIDs. If the domains don't match—or if idmapping is disabled—all files fall back to `nobody`. The Synology's Kerberos ID mapping (`nfs/harbor-srv@HARBOR.LOCAL` → `root`) controls which local user the principal maps to on the server side; this file controls the reverse mapping on the client side.
+NFSv4 ID mapping configuration. Sets the idmap domain to `harbor.local` to match the Synology NFS server. With `sec=krb5i`, the NFS server returns file owners as `user@domain` strings rather than numeric user IDs (UIDs). The client uses `idmapd` to translate these back to local UIDs. If the domains don't match—or if idmapping is disabled—all files fall back to `nobody`. The Synology's Kerberos ID mapping (`nfs/harbor-srv@HARBOR.LOCAL` → `root`) controls which local user the principal maps to on the server side; this file controls the reverse mapping on the client side.
 
 ### [`etc/modprobe.d/nfs-idmap.conf`](etc/modprobe.d/nfs-idmap.conf)
 
