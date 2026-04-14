@@ -46,3 +46,6 @@ kadmind
 HMAC
 RFC
 ACL
+idmap
+idmapping
+UIDs
