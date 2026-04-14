@@ -53,7 +53,7 @@ Overrides `systemd-networkd-wait-online` to pass `--any`, so any interface comin
 
 ### [`etc/systemd/system/mnt-synology-harbor_srv.mount`](etc/systemd/system/mnt-synology-harbor_srv.mount)
 
-Mounts the NAS share (`192.168.1.10:/volume1/harbor_srv`) at `/mnt/synology/harbor_srv` via NFSv4.1. Uses a soft mount with a 30-second timeout so a NAS outage doesn't hang the system. The `_netdev` flag tells systemd this mount requires the network and orders it correctly in the boot sequence. Enabled as a systemd unit so it starts automatically.
+Mounts the NAS share (`synology:/volume1/harbor_srv`) at `/mnt/synology/harbor_srv` via NFSv4.1 with Kerberos integrity protection (`sec=krb5i`). Uses a soft mount with a 30-second timeout so a NAS outage doesn't hang the system. The `_netdev` flag tells systemd this mount requires the network and orders it correctly in the boot sequence. Enabled as a systemd unit so it starts automatically.
 
 ### [`etc/systemd/system/docker.service.d/nfs-dependency.conf`](etc/systemd/system/docker.service.d/nfs-dependency.conf)
 
@@ -63,13 +63,21 @@ Drop-in for `docker.service` that adds a hard dependency on the NAS mount. Preve
 
 ## Kerberos
 
-The server runs a local MIT Kerberos Key Distribution Center (KDC) with realm `HARBOR.LOCAL`. Running the KDC on the server itself avoids a chicken-and-egg dependency. The KDC starts from local storage before the NFS mount, so tickets are ready when the mount begins. The realm name `HARBOR.LOCAL` keeps this server-local realm separate from `jcb.local`. That leaves `jcb.local` free for a future Docker-based KDC covering broader lab services. The eventual goal is `sec=krb5i` on the NFS mount (mutual auth + integrity). See issue blouin-labs/issues#43.
+The NFS mount uses `sec=krb5i` (Kerberos mutual authentication + integrity protection). The server runs a local MIT Kerberos KDC with realm `HARBOR.LOCAL`. Running the KDC locally avoids a chicken-and-egg dependency—the KDC starts from local storage before the NFS mount, so tickets are ready when the mount begins. The realm name `HARBOR.LOCAL` keeps this server-local realm separate from `jcb.local`, leaving `jcb.local` free for a future Docker-based KDC covering broader lab services.
 
 The KDC database and server keytab (`/etc/krb5.keytab`) are **secrets**. They're **not** present in this overlay—they're injected into the target partition by `harbor-deploy.sh` at flash time from the `KRB5_SECRETS_B64` Actions secret. See `scripts/README.md` and the PR description for the one-time keytab generation steps.
 
 ### [`etc/krb5.conf`](etc/krb5.conf)
 
 Kerberos client library configuration. Defines realm `HARBOR.LOCAL` with KDC and admin server both on `localhost`. DNS-based KDC discovery is off (`dns_lookup_kdc = false`) to prevent realm spoofing via a rogue DNS record. Ticket forwarding is off (`forwardable = false`) because NFS doesn't require delegation. Keeping it off limits the damage if an attacker compromises a service principal. Ticket lifetime is 24 hours, renewable for 7 days.
+
+### [`etc/idmapd.conf`](etc/idmapd.conf)
+
+NFSv4 ID mapping configuration. Sets the idmap domain to `harbor.local` to match the Synology NFS server. With `sec=krb5i`, the NFS server returns file owners as `user@domain` strings rather than numeric UIDs. The client uses `idmapd` to translate these back to local UIDs. If the domains don't match—or if idmapping is disabled—all files fall back to `nobody`. The Synology's Kerberos ID mapping (`nfs/harbor-srv@HARBOR.LOCAL` → `root`) controls which local user the principal maps to on the server side; this file controls the reverse mapping on the client side.
+
+### [`etc/modprobe.d/nfs-idmap.conf`](etc/modprobe.d/nfs-idmap.conf)
+
+Enables NFSv4 ID mapping in the kernel NFS client (`nfs4_disable_idmapping=N`). The kernel default is `Y` (disabled), which works for `sec=sys` mounts where numeric UIDs pass through directly. With `sec=krb5i`, disabling idmapping causes all file ownership to resolve to `nobody` because the client can't translate the server's `user@domain` owner strings.
 
 ### [`var/lib/krb5kdc/kdc.conf`](var/lib/krb5kdc/kdc.conf)
 
@@ -82,6 +90,14 @@ kadmin access control list. Grants full administrative privileges (`*`) to any p
 ### [`etc/systemd/system/rpc-gssd.service.d/krb5-ordering.conf`](etc/systemd/system/rpc-gssd.service.d/krb5-ordering.conf)
 
 Drop-in that orders `rpc-gssd` after `krb5-kdc.service` and adds a hard dependency on it. Without this ordering, `rpc-gssd` could start before the local KDC is ready, causing GSS authentication failures on the NFS mount.
+
+### [`etc/systemd/system/rpc-gssd.service.d/keytab-init.conf`](etc/systemd/system/rpc-gssd.service.d/keytab-init.conf)
+
+Obtains a TGT from the local KDC using the machine keytab after `rpc-gssd` starts. The NFS mount (`sec=krb5i`) requires a credential cache at `/tmp/krb5cc_0` even when `rpc.gssd -n` handles per-UID access.
+
+### [`etc/systemd/system/rpc-gssd.service.d/no-user-creds.conf`](etc/systemd/system/rpc-gssd.service.d/no-user-creds.conf)
+
+Overrides `rpc.gssd` to run with `-n` (machine credentials for all UIDs). Without this, non-root processes (e.g., the runner or compose-deploy scripts) cannot establish a GSS context for `sec=krb5i` NFS access because they lack individual Kerberos tickets.
 
 ---
 
