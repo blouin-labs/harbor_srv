@@ -25,8 +25,8 @@ ISO
 ESP
 EFI
 UEFI
-UID
-GID
+UIDs?
+GIDs?
 LAN
 DNS
 Kerberos
@@ -48,4 +48,3 @@ RFC
 ACL
 idmap
 idmapping
-UIDs
