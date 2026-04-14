@@ -63,7 +63,7 @@ Drop-in for `docker.service` that adds a hard dependency on the NAS mount. Preve
 
 ## Kerberos
 
-The NFS mount uses `sec=krb5i` (Kerberos mutual authentication + integrity protection). The server runs a local MIT Kerberos KDC with realm `HARBOR.LOCAL`. Running the KDC locally avoids a chicken-and-egg dependency—the KDC starts from local storage before the NFS mount, so tickets are ready when the mount begins. The realm name `HARBOR.LOCAL` keeps this server-local realm separate from `jcb.local`, leaving `jcb.local` free for a future Docker-based KDC covering broader lab services.
+The NFS mount uses `sec=krb5i` (Kerberos mutual authentication + integrity protection). The server runs a local MIT Kerberos Key Distribution Center (KDC) with realm `HARBOR.LOCAL`. Running the KDC locally avoids a chicken-and-egg dependency—it starts from local storage before the NFS mount, so tickets are ready when the mount begins. The realm name `HARBOR.LOCAL` keeps this server-local realm separate from `jcb.local`, leaving `jcb.local` free for a future Docker-based KDC covering broader lab services.
 
 The KDC database and server keytab (`/etc/krb5.keytab`) are **secrets**. They're **not** present in this overlay—they're injected into the target partition by `harbor-deploy.sh` at flash time from the `KRB5_SECRETS_B64` Actions secret. See `scripts/README.md` and the PR description for the one-time keytab generation steps.
 
@@ -93,11 +93,11 @@ Drop-in that orders `rpc-gssd` after `krb5-kdc.service` and adds a hard dependen
 
 ### [`etc/systemd/system/rpc-gssd.service.d/keytab-init.conf`](etc/systemd/system/rpc-gssd.service.d/keytab-init.conf)
 
-Obtains a TGT from the local KDC using the machine keytab after `rpc-gssd` starts. The NFS mount (`sec=krb5i`) requires a credential cache at `/tmp/krb5cc_0` even when `rpc.gssd -n` handles per-UID access.
+Obtains a Kerberos ticket from the local KDC using the machine keytab after `rpc-gssd` starts. The NFS mount (`sec=krb5i`) requires a credential cache at `/tmp/krb5cc_0` even when `rpc.gssd -n` handles per-UID access.
 
 ### [`etc/systemd/system/rpc-gssd.service.d/no-user-creds.conf`](etc/systemd/system/rpc-gssd.service.d/no-user-creds.conf)
 
-Overrides `rpc.gssd` to run with `-n` (machine credentials for all UIDs). Without this, non-root processes (e.g., the runner or compose-deploy scripts) cannot establish a GSS context for `sec=krb5i` NFS access because they lack individual Kerberos tickets.
+Overrides `rpc.gssd` to run with `-n` (machine credentials for all UIDs). Without this, non-root processes (for example, the runner or compose-deploy scripts) can't establish a GSS context for `sec=krb5i` NFS access because they lack individual Kerberos tickets.
 
 ---
 
