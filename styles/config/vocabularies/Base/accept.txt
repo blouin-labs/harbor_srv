@@ -19,6 +19,7 @@ PARTUUIDs
 networkd
 Multicast
 Docker
+disabled
 NFS
 NAS
 ISO
