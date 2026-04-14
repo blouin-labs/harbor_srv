@@ -73,11 +73,11 @@ Kerberos client library configuration. Defines realm `HARBOR.LOCAL` with KDC and
 
 ### [`etc/idmapd.conf`](etc/idmapd.conf)
 
-NFSv4 ID mapping configuration. Sets the idmap domain to `harbor.local` to match the Synology NFS server. With `sec=krb5i`, the NFS server returns file owners as `user@domain` strings rather than numeric user IDs (UIDs). The client uses `idmapd` to translate these back to local UIDs. If the domains don't match—or if idmapping is disabled—all files fall back to `nobody`. The Synology's Kerberos ID mapping (`nfs/harbor-srv@HARBOR.LOCAL` → `root`) controls which local user the principal maps to on the server side; this file controls the reverse mapping on the client side.
+NFSv4 ID mapping configuration. Sets the ID mapping domain to `harbor.local` to match the Synology NFS server. With `sec=krb5i`, the NFS server returns file owners as `user@domain` strings rather than numeric user IDs (UIDs). The client uses `idmapd` to translate these back to local UIDs. If the domains don't match—or if ID mapping is turned off—all files fall back to `nobody`. The Synology's Kerberos ID mapping (`nfs/harbor-srv@HARBOR.LOCAL` → `root`) controls which local user the principal maps to on the server side; this file controls the reverse mapping on the client side.
 
 ### [`etc/modprobe.d/nfs-idmap.conf`](etc/modprobe.d/nfs-idmap.conf)
 
-Enables NFSv4 ID mapping in the kernel NFS client (`nfs4_disable_idmapping=N`). The kernel default is `Y` (disabled), which works for `sec=sys` mounts where numeric UIDs pass through directly. With `sec=krb5i`, disabling idmapping causes all file ownership to resolve to `nobody` because the client can't translate the server's `user@domain` owner strings.
+Enables NFSv4 ID mapping in the kernel NFS client (`nfs4_disable_idmapping=N`). The kernel default is `Y` (disabled), which works for `sec=sys` mounts where numeric UIDs pass through directly. With `sec=krb5i`, turning off ID mapping causes all file ownership to resolve to `nobody` because the client can't translate the server's `user@domain` owner strings.
 
 ### [`var/lib/krb5kdc/kdc.conf`](var/lib/krb5kdc/kdc.conf)
 
